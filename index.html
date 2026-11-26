@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<!-- Cavalaria v1.1 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cavalaria — Cavalry Chess. Free.</title>
+<meta name="description" content="Cavalaria: a free browser chess variant where every piece is a knight+pawn cavalryman, with river terrain, real cavalry formations, and a last-unit power. Play a friend with a room code, play anyone, play the bot, or play locally. No sign-up, no cost.">
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e232e;--line:#2a3040;--txt:#eef1f6;--mut:#9aa3b2;--gold:#f2c14e;--green:#58b368;--red:#e5484d;--blue:#4c9aff;--river:#2e6da8;--river2:#3a86c8;--light:#f0d9b5;--dark:#b58863}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100%}
+body{padding:0 0 40px}
+a{color:var(--gold)}
+.wrap{max-width:1060px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 0 4px}
+.logo{font-size:30px;font-weight:900;letter-spacing:.5px}
+.logo span{color:var(--gold)}
+.tag{color:var(--mut);font-size:13px;margin-top:2px}
+.badge{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);white-space:nowrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+h2{font-size:19px;margin-bottom:6px}
+p{color:var(--mut);font-size:14px;line-height:1.5}
+.modes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0}
+@media(max-width:640px){.modes{grid-template-columns:1fr}}
+.mode{border:2px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;background:var(--panel2);text-align:left;color:var(--txt);font-family:inherit}
+.mode.sel{border-color:var(--gold);box-shadow:0 0 0 2px rgba(242,193,78,.25)}
+.mode b{font-size:16px;display:block;margin-bottom:4px}
+.mode .dice{font-size:22px}
+.mode p{font-size:13px}
+.mode .formation-diagram{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.35;color:var(--txt);background:#0c0e12;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;white-space:pre}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+input[type=text]{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:16px;min-width:0}
+input[type=text]:focus{outline:2px solid var(--gold);outline-offset:1px}
+button{font-family:inherit;font-size:15px;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;color:#111;background:var(--gold)}
+button:hover{filter:brightness(1.07)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+button.danger{background:#3a1d1f;color:#ffb3b5;border:1px solid #5b2a2d}
+button.small{padding:8px 11px;font-size:13px}
+select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-size:15px}
+.btn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
+.btn-grid button{width:100%}
+.rules{margin-top:14px;font-size:13.5px}
+.rules li{margin:6px 0 6px 18px;color:var(--mut);line-height:1.5}
+.rules li b{color:var(--txt)}
+.hidden{display:none!important}
+/* game layout */
+.game-layout{display:grid;grid-template-columns:minmax(0,640px) 340px;gap:16px;align-items:start;margin-top:12px}
+@media(max-width:900px){.game-layout{grid-template-columns:1fr}}
+.board-wrap{position:relative;width:100%;max-width:640px;margin:0 auto}
+.board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:3px solid #3a2f26;box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;min-height:0}
+.sq.light{background:var(--light)}
+.sq.dark{background:var(--dark)}
+.sq.river{background:linear-gradient(135deg,var(--river) 0%,var(--river2) 100%)}
+.sq.river.light{background:linear-gradient(135deg,#3a7ab5 0%,#4a93d1 100%)}
+.sq .pc{font-size:clamp(28px,7.2vw,52px);line-height:1;pointer-events:none;z-index:2}
+.board.size12 .pc{font-size:clamp(18px,4.2vw,34px)}
+.board.size12 .emp{font-size:clamp(10px,2vw,15px)}
+.sq .pc.w{color:#fafafa;text-shadow:0 1px 0 #222,0 0 3px #000,0 2px 4px rgba(0,0,0,.6)}
+.sq .pc.b{color:#151515;text-shadow:0 0 3px rgba(255,255,255,.75),0 1px 2px rgba(255,255,255,.4)}
+.sq .emp{position:absolute;right:4px;bottom:2px;font-size:clamp(14px,3vw,22px);line-height:1;z-index:3;pointer-events:none;color:var(--gold);text-shadow:0 0 4px #000,0 1px 2px #000}
+.sq.empowered{box-shadow:inset 0 0 0 3px var(--gold)}
+.sq.sel{box-shadow:inset 0 0 0 4px var(--gold)}
+.sq.last{box-shadow:inset 0 0 0 4px rgba(76,154,255,.85)}
+.sq .dot{position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(20,60,20,.45);z-index:1;pointer-events:none}
+.sq .ring{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(229,72,77,.9);z-index:1;pointer-events:none}
+.sq .coord{position:absolute;font-size:10px;font-weight:700;opacity:.75;z-index:1;pointer-events:none}
+.sq .coord.f{left:3px;bottom:2px}
+.sq .coord.r{right:3px;top:2px}
+.sq.light .coord{color:#7a5a34}
+.sq.dark .coord{color:#f0d9b5}
+.sq.river .coord{color:#d6ecff}
+.status{font-size:17px;font-weight:800;padding:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-bottom:12px;line-height:1.4}
+.status small{display:block;font-weight:500;color:var(--mut);font-size:13px;margin-top:3px}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:14px;font-weight:700}
+.pill.dead{opacity:.45;text-decoration:line-through}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:14px 0 6px}
+.panel h3:first-child{margin-top:0}
+.moves{max-height:180px;overflow:auto;font-size:14px;line-height:1.7;color:var(--mut)}
+.moves b{color:var(--txt)}
+.captured{font-size:22px;line-height:1.5;min-height:28px}
+.conn{font-size:13px;color:var(--mut);line-height:1.5;word-break:break-all}
+.conn b{color:var(--txt)}
+.roomcode{font-size:24px;font-weight:900;letter-spacing:.25em;color:var(--gold)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:460px;width:100%;text-align:center}
+.modal .box h2{font-size:22px}
+.empower-pieces{display:flex;gap:10px;justify-content:center;margin:16px 0 4px}
+.empower-pieces button{font-size:16px;padding:14px 16px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);line-height:1.4}
+.empower-pieces button b{font-size:30px;display:block}
+footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-height:1.6}
+</style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><div class="logo">🐎 CAVALARIA</div><div class="tag">Cavalry chess — every piece is a knight and a pawn. Free forever.</div></div>
+  <div class="badge">FREE &nbsp;•&nbsp; NO SIGN-UP &nbsp;•&nbsp; PC + MOBILE</div>
+</header>
+
+<!-- ============ MENU ============ -->
+<div id="menuScreen">
+  <div class="card">
+    <h2>Pick a mode</h2>
+    <p>Three ways to ride. The formations decide the opening — the river decides the middle.</p>
+    <div class="modes">
+      <button class="mode" id="modeChoose" type="button">
+        <span class="dice">⚔️</span><b>1 &nbsp;Choose Formations</b>
+        <p>Pick a formation for each side and switch the river on or off. Your battle, your setup.</p>
+      </button>
+      <button class="mode sel" id="modeMain" type="button">
+        <span class="dice">🐎</span><b>2 &nbsp;Main — Mongol vs Roman</b>
+        <p><b style="color:#fff">White rides Mongolian, Black rides Roman.</b> The Mongolian side always moves first. River on or off, your call.</p>
+      </button>
+      <button class="mode" id="modeRandom" type="button">
+        <span class="dice">🎲</span><b>3 &nbsp;Random</b>
+        <p>Each side is randomly Roman or Mongolian — you won't know which you are until the board appears. The river is always on, in a random shape.</p>
+      </button>
+    </div>
+    <div id="chooseOpts" class="row hidden">
+      <label for="whiteFormation" style="color:var(--mut);font-size:14px">White formation</label>
+      <select id="whiteFormation"><option value="mongolian">Mongolian</option><option value="roman">Roman</option></select>
+      <label for="blackFormation" style="color:var(--mut);font-size:14px">Black formation</label>
+      <select id="blackFormation"><option value="roman">Roman</option><option value="mongolian">Mongolian</option></select>
+    </div>
+    <div id="riverOpts" class="row">
+      <label for="riverToggle" style="color:var(--mut);font-size:14px">River</label>
+      <select id="riverToggle"><option value="on">River on</option><option value="off">River off</option></select>
+      <span id="riverNote" style="color:var(--mut);font-size:13px">Fixed river across ranks 4–5, one square per file.</span>
+    </div>
+    <div class="row">
+      <label for="boardSize" style="color:var(--mut);font-size:14px">Board size</label>
+      <select id="boardSize"><option value="8">8 × 8 — Classic (16 pieces a side)</option><option value="12">12 × 12 — Grand (28 pieces a side)</option></select>
+      <span style="color:var(--mut);font-size:13px">Applies to all modes and all ways to play. Joining a room uses the host's board.</span>
+    </div>
+    <div id="randomNote" class="row hidden">
+      <span style="color:var(--mut);font-size:13px">Random mode: formations are drawn per side (Roman or Mongolian each), the river is always on with a random connected shape — one river square per file, never two in the same file. The Mongolian side moves first; if both sides draw the same formation, White moves first.</span>
+    </div>
+    <div class="row">
+      <label for="nameInput" style="color:var(--mut);font-size:14px">Your name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Henrique" maxlength="20" style="flex:1;min-width:140px">
+      <label for="botLevel" style="color:var(--mut);font-size:14px">Bot</label>
+      <select id="botLevel"><option value="medium">Medium (greedy)</option><option value="easy">Easy (random)</option></select>
+    </div>
+    <div class="btn-grid">
+      <button id="btnCreate" type="button">➕ Create room<br><small style="font-weight:500;font-size:12px">get a code, send it to a friend</small></button>
+      <button id="btnAnyone" type="button" class="ghost">🌍 Play anyone<br><small style="font-weight:500;font-size:12px">matched with a stranger</small></button>
+      <button id="btnBot" type="button" class="ghost">🤖 Play the bot<br><small style="font-weight:500;font-size:12px">solo, right now</small></button>
+      <button id="btnLocal" type="button" class="ghost">👥 Local 2-player<br><small style="font-weight:500;font-size:12px">same screen, pass &amp; play</small></button>
+    </div>
+    <div class="row">
+      <input type="text" id="joinCode" placeholder="Room code — e.g. KQ7B" maxlength="8" style="flex:1;text-transform:uppercase">
+      <button id="btnJoin" type="button" class="ghost">Join room →</button>
+    </div>
+    <p id="menuMsg" style="margin-top:10px;min-height:20px"></p>
+  </div>
+
+  <div class="card rules" style="margin-top:14px">
+    <h2>How Cavalaria works</h2>
+    <ul>
+      <li><b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).</li>
+      <li><b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.</li>
+      <li><b>The river slows you down.</b> Entering a river square is a normal move. <b>Leaving</b> one costs an extra square: a knight's jump from a river square is only <b>1 forward + 1 to the side</b> (a single diagonal step) instead of 2 + 1. It only counts once, at the start of the move — jumping <i>over</i> the river, or landing in the river again, costs nothing extra. A pawn leaving the river still steps 1 forward or captures 1 diagonally — but it can't double-step out of the river (the exit cost eats the second square).</li>
+      <li><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
+      <li><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
+      <li><b>First move goes to the Mongolian side.</b> If both sides use the same formation, White moves first.</li>
+      <li><b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.</li>
+      <li><b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.</li>
+      <li><b>Board size.</b> The 12×12 board ("Grand") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.</li>
+      <li><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
+    </ul>
+    <div class="row" style="gap:14px">
+      <div><b style="color:var(--txt)">Roman</b><div class="formation-diagram">. . . X X . . .
+X . X X X X . X
+X X X X X X X X</div></div>
+      <div><b style="color:var(--txt)">Mongolian</b><div class="formation-diagram">X X . . . . X X
+X X X . . X X X
+. X X X X X X .</div></div>
+      <div><b style="color:var(--txt)">River (fixed)</b><div class="formation-diagram">_ _ . . . . _ _
+. . _ _ _ _ . .</div><p style="margin-top:6px">Ranks 5 and 4, one square per file.</p></div>
+      <div><b style="color:var(--txt)">Roman 12×12</b><div class="formation-diagram">. . . . X X X X . . . .
+. . . X X X X X X . . .
+X . X X X X X X X X . X
+. X . X X X X X X . X .</div></div>
+      <div><b style="color:var(--txt)">Mongolian 12×12</b><div class="formation-diagram">X X . . . . . . . . X X
+X X X X . . . . X X X X
+. X X X X . . X X X X .
+. . X X X X X X X X . .</div></div>
+      <div><b style="color:var(--txt)">River 12×12 (fixed)</b><div class="formation-diagram">~ ~ ~ . . . . . . ~ ~ ~
+. . . ~ ~ ~ ~ ~ ~ . . .</div><p style="margin-top:6px">Ranks 7 and 6, one square per file.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div id="gameScreen" class="hidden">
+  <div class="game-layout">
+    <div>
+      <div class="board-wrap"><div class="board" id="board"></div></div>
+      <div class="row" style="justify-content:space-between">
+        <button class="ghost small" id="btnFlip" type="button">⇅ Flip board</button>
+        <button class="ghost small" id="btnSound" type="button">🔊 Sound on</button>
+        <button class="ghost small" id="btnMenu" type="button">← Menu</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="status" id="statusBox">White to move<small id="statusSub"></small></div>
+      <div class="pills" id="pillsBox"></div>
+      <div class="card" style="padding:14px">
+        <h3>Room</h3>
+        <div class="conn" id="connBox">Local game</div>
+        <div id="roomBox" class="hidden" style="margin-top:8px"><span class="roomcode" id="roomCodeText"></span><br>
+        <button class="ghost small" id="btnCopy" type="button" style="margin-top:8px">Copy code / link</button></div>
+        <h3>Captured</h3>
+        <div class="captured" id="capWhite">♘ White took: —</div>
+        <div class="captured" id="capBlack">♞ Black took: —</div>
+        <h3>Moves</h3>
+        <div class="moves" id="movesBox">No moves yet — the formations are set, now you ride.</div>
+        <div class="row" style="margin-top:14px">
+          <button id="btnRematch" type="button" class="small">🐎 Rematch (new setup)</button>
+          <button id="btnResign" type="button" class="danger small">🏳 Resign</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer> Cavalaria v1.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
+</div>
+
+<div id="empowerModal" class="modal hidden"><div class="box">
+  <h2>Last unit standing!</h2><p id="empowerText">Your last Cavalaria earns an extra power. Choose one — it keeps its knight and pawn moves too.</p>
+  <div class="empower-pieces" id="empowerPieces">
+    <button id="empowerRook" type="button"><b>♜</b>Rook — Torre<br><small style="font-weight:500">slides along ranks &amp; files</small></button>
+    <button id="empowerBishop" type="button"><b>♝</b>Bishop — Bispo<br><small style="font-weight:500">slides along diagonals</small></button>
+  </div>
+</div></div>
+
+<div id="overModal" class="modal hidden"><div class="box">
+  <h2 id="overTitle">White wins</h2><p id="overReason"></p>
+  <div class="row" style="justify-content:center;margin-top:16px">
+    <button id="btnOverRematch" type="button">🐎 Rematch</button>
+    <button id="btnOverMenu" type="button" class="ghost">Menu</button>
+  </div>
+</div></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   CAVALARIA — engine (pure JS, no DOM dependency, unit-tested in Node:
+   `node test/engine.test.js` extracts this script).
+   Board: index 0 = a8 (top-left), 63 = h1. Row 0 = rank 8, row 7 = rank 1.
+   White moves toward decreasing row (up the board); Black toward
+   increasing row. A piece is {c:'w'|'b', empowered:null|'R'|'B',
+   hasMoved:boolean}.
+   ===================================================================== */
+const FORMATIONS = {
+  // 8x8: three ranks, 16 pieces a side. Rows are nearest-rank-first from
+  // the owning player's perspective (rows[0] = the rank closest to them).
+  8: {
+    roman:     { name: 'Roman',     rows: [[1,1,1,1,1,1,1,1],[1,0,1,1,1,1,0,1],[0,0,0,1,1,0,0,0]] },
+    mongolian: { name: 'Mongolian', rows: [[0,1,1,1,1,1,1,0],[1,1,1,0,0,1,1,1],[1,1,0,0,0,0,1,1]] },
+  },
+  // 12x12 ("Grand"): four ranks, 28 pieces a side. Same shapes, bigger:
+  // Roman is the dense block with its centre pushed forward; Mongolian is
+  // the horns, with its wings pushed forward and its centre held back.
+  12: {
+    roman:     { name: 'Roman',     rows: [[0,1,0,1,1,1,1,1,1,0,1,0],[1,0,1,1,1,1,1,1,1,1,0,1],[0,0,0,1,1,1,1,1,1,0,0,0],[0,0,0,0,1,1,1,1,0,0,0,0]] },
+    mongolian: { name: 'Mongolian', rows: [[0,0,1,1,1,1,1,1,1,1,0,0],[0,1,1,1,1,0,0,1,1,1,1,0],[1,1,1,1,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,0,1,1]] },
+  },
+};
+// Fixed river (the example boards): one river square per file, always one
+// connected band across the board. 8x8: rank 5 = a,b,g,h; rank 4 = c,d,e,f.
+// 12x12: rank 7 = a,b,c,j,k,l; rank 6 = d,e,f,g,h,i.
+const FIXED_RIVER = [24,25,30,31,34,35,36,37];
+const FIXED_RIVER_12 = [60,61,62,69,70,71,75,76,77,78,79,80];
+const FILES = 'abcdefghijkl';
+function sqName(i,size){ size=size||8; return FILES[i%size] + (size - Math.floor(i/size)); }
+function opp(c){ return c==='w' ? 'b' : 'w'; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function randomSeed(){ if (typeof crypto!=='undefined' && crypto.getRandomValues){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]>>>0; } return (Math.random()*4294967296)>>>0; }
+function countPieces(board,color){ let n=0; for(const p of board) if(p&&p.c===color) n++; return n; }
+function solePiece(board,color){ let found=-1,n=0; for(let i=0;i<board.length;i++){ const p=board[i]; if(p&&p.c===color){ n++; found=i; } } return n===1?found:-1; }
+function riverSet(river){ return new Set(river||[]); }
+function isRiver(river,i){ return (river||[]).includes(i); }
+// The river is connected when every neighbouring file's river square is
+// at most one rank away (orthogonal or diagonal neighbour). With exactly
+// one square per file on ranks 4/5 this always holds — checked in tests.
+function riverConnected(river,size){
+  size=size||8;
+  if(!river||!river.length) return true;
+  const byFile={};
+  for(const i of river){ const c=i%size, r=(i/size)|0; if(byFile[c]!==undefined) return false; byFile[c]=r; }
+  const files=Object.keys(byFile).map(Number).sort((a,b)=>a-b);
+  if(files.length!==size) return false;
+  for(let k=1;k<files.length;k++){ if(files[k]!==files[k-1]+1) return false; if(Math.abs(byFile[files[k]]-byFile[files[k-1]])>1) return false; }
+  return true;
+}
+function placeFormation(board,color,formationKey,size){
+  const rows=FORMATIONS[size][formationKey].rows;
+  for(let rankIdx=0;rankIdx<rows.length;rankIdx++){
+    const row=color==='w' ? size-1-rankIdx : 0+rankIdx;
+    for(let c=0;c<size;c++) if(rows[rankIdx][c]) board[row*size+c]={c:color,empowered:null,hasMoved:false};
+  }
+}
+function firstTurnFor(whiteFormation,blackFormation){
+  const wM=whiteFormation==='mongolian', bM=blackFormation==='mongolian';
+  if(wM&&!bM) return 'w';       // Mongolian side moves first
+  if(bM&&!wM) return 'b';
+  return 'w';                   // both the same formation: White starts
+}
+// opts: {whiteFormation, blackFormation, riverMode:'off'|'fixed'|'random', boardSize:8|12}
+function genSetup(mode,seed,opts){
+  opts=opts||{};
+  const size=opts.boardSize===12?12:8;
+  const rng=mulberry32(seed>>>0);
+  let whiteFormation, blackFormation, river;
+  const fixedRiver=size===12?FIXED_RIVER_12:FIXED_RIVER;
+  if(mode==='choose'){
+    whiteFormation=opts.whiteFormation||'mongolian';
+    blackFormation=opts.blackFormation||'roman';
+    river=opts.riverMode==='off'?[]:fixedRiver.slice();
+  } else if(mode==='main'){
+    whiteFormation='mongolian'; blackFormation='roman';
+    river=opts.riverMode==='off'?[]:fixedRiver.slice();
+  } else { // random: formation per side + river shape, both from the seed
+    whiteFormation=rng()<0.5?'roman':'mongolian';
+    blackFormation=rng()<0.5?'roman':'mongolian';
+    river=[];
+    // Middle two ranks (4/5 on 8x8, 6/7 on 12x12), one square per file.
+    for(let c=0;c<size;c++){ const rank=rng()<0.5?size/2:size/2+1; river.push((size-rank)*size+c); }
+    river.sort((a,b)=>a-b);
+  }
+  const board=new Array(size*size).fill(null);
+  placeFormation(board,'w',whiteFormation,size);
+  placeFormation(board,'b',blackFormation,size);
+  return {board,mode,seed,whiteFormation,blackFormation,river,turn:firstTurnFor(whiteFormation,blackFormation),size};
+}
+function pseudoMoves(board,river,color,size){
+  size=size||8;
+  const moves=[];
+  const rv=riverSet(river);
+  const push=(from,to,extra)=>moves.push(Object.assign({from,to,double:false},extra||{}));
+  const inB=(r,c)=>r>=0&&r<size&&c>=0&&c<size;
+  for(let i=0;i<board.length;i++){ const p=board[i]; if(!p||p.c!==color) continue;
+    const r=(i/size)|0, c=i%size;
+    const dir=color==='w'?-1:1;
+    // ---- pawn component: 1 forward, 2 forward on first move, capture diagonally
+    const r1=r+dir;
+    if(inB(r1,c)&&!board[r1*size+c]){
+      push(i,r1*size+c);
+      const r2=r+2*dir;
+      // No double-step out of the river: the exit cost eats the 2nd square.
+      if(!p.hasMoved&&!rv.has(i)&&inB(r2,c)&&!board[r2*size+c]) push(i,r2*size+c,{double:true});
+    }
+    for(const dc of [-1,1]){ const cc=c+dc;
+      if(inB(r1,cc)){ const t=board[r1*size+cc]; if(t&&t.c!==color) push(i,r1*size+cc); }
+    }
+    // ---- knight component: 2+1 jump — or, from a river square, only 1+1
+    // The river penalty is paid once, at the start of the move: entering
+    // the river is normal, jumping over it is normal, and landing back in
+    // it costs nothing extra.
+    const offs=rv.has(i)?[[-1,-1],[-1,1],[1,-1],[1,1]]:[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+    for(const [dr,dc] of offs){ const rr=r+dr, cc=c+dc; if(!inB(rr,cc)) continue;
+      const t=board[rr*size+cc]; if(!t||t.c!==color) push(i,rr*size+cc); }
+    // ---- empowered slides (river does not shorten these: the penalty is
+    // defined only on the knight's long leg; see rules)
+    if(p.empowered){
+      const dirs=p.empowered==='R'?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,1],[1,-1],[-1,1],[-1,-1]];
+      for(const [dr,dc] of dirs){ let rr=r+dr, cc=c+dc;
+        while(inB(rr,cc)){ const t=board[rr*size+cc];
+          if(!t) push(i,rr*size+cc);
+          else { if(t.c!==color) push(i,rr*size+cc); break; }
+          rr+=dr; cc+=dc; } }
+    }
+  }
+  return moves;
+}
+function legalMoves(st){ return pseudoMoves(st.board,st.river,st.turn,st.size||8); }
+function applyMoveToBoard(board,move){
+  const nb=board.slice(); const p=nb[move.from]; nb[move.from]=null;
+  const captured=nb[move.to]||null;
+  nb[move.to]={c:p.c,empowered:p.empowered||null,hasMoved:true};
+  return {board:nb,captured};
+}
+function evaluate(st){
+  const w=countPieces(st.board,'w'), b=countPieces(st.board,'b');
+  if(w===0&&b===0) return {over:true,winner:null,reason:'No pieces left on either side. Draw!'};
+  if(w===0) return {over:true,winner:'b',reason:'White has no pieces left. Black wins!'};
+  if(b===0) return {over:true,winner:'w',reason:'Black has no pieces left. White wins!'};
+  return {over:false,winner:null,reason:''};
+}
+// If the side to move has no move at all, the turn just passes to the
+// other side (the game does NOT end — pieces are still alive). Only when
+// neither side can move is it a draw. Never called while an empowerment
+// choice is pending: the new power may itself create moves.
+function ensureTurnCanMove(st){
+  if(st.over||st.pendingEmpower) return;
+  if(legalMoves(st).length>0){ st.passNote=''; return; }
+  const otherMoves=pseudoMoves(st.board,st.river,opp(st.turn),st.size||8).length;
+  if(otherMoves===0){
+    st.over=true; st.winner=null; st.reason='Neither side has a move — draw.';
+    return;
+  }
+  st.passNote=(st.turn==='w'?'White':'Black')+' has no moves — turn passes to '+(st.turn==='w'?'Black':'White')+'.';
+  st.turn=opp(st.turn);
+}
+function checkEmpowerment(st){
+  if(st.over) return;
+  const side=st.turn;
+  const idx=solePiece(st.board,side);
+  if(idx>=0&&!st.board[idx].empowered){ st.pendingEmpower=side; return; }
+  st.pendingEmpower=null;
+}
+function resolveEmpower(st,choice){
+  if(!st.pendingEmpower) return false;
+  if(choice!=='R'&&choice!=='B') return false;
+  const idx=solePiece(st.board,st.pendingEmpower);
+  if(idx<0) return false;
+  st.board[idx].empowered=choice;
+  st.history.push({from:idx,to:idx,piece:'C',color:st.pendingEmpower,captured:null,empower:choice});
+  st.pendingEmpower=null;
+  ensureTurnCanMove(st);
+  return true;
+}
+function newGame(mode,seed,opts){
+  opts=opts||{};
+  if(opts.board){
+    const st={mode,seed,board:opts.board.map(p=>p?{c:p.c,empowered:p.empowered||null,hasMoved:!!p.hasMoved}:null),
+      river:(opts.river||[]).slice(),whiteFormation:opts.whiteFormation||'mongolian',blackFormation:opts.blackFormation||'roman',
+      turn:opts.turn||'w',size:opts.size||Math.round(Math.sqrt(opts.board.length)),
+      fullmove:1,over:false,winner:null,reason:'',history:[],passNote:'',pendingEmpower:null};
+    const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+    if(!st.over){
+      // a custom board may already have a lone unempowered piece on the
+      // side to move; the other side's lone piece is caught when its
+      // turn comes (checkEmpowerment after the next move).
+      const idx=solePiece(st.board,st.turn);
+      if(idx>=0&&!st.board[idx].empowered) st.pendingEmpower=st.turn;
+      if(!st.pendingEmpower) ensureTurnCanMove(st);
+    }
+    return st;
+  }
+  const setup=genSetup(mode,seed,opts);
+  const st={mode,seed,board:setup.board,river:setup.river,whiteFormation:setup.whiteFormation,blackFormation:setup.blackFormation,
+    turn:setup.turn,size:setup.size,fullmove:1,over:false,winner:null,reason:'',history:[],passNote:'',pendingEmpower:null};
+  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+  ensureTurnCanMove(st);
+  return st;
+}
+function doMove(st,req){
+  if(st.over||st.pendingEmpower) return null;
+  st.passNote='';
+  const legal=legalMoves(st);
+  const m=legal.find(x=>x.from===req.from&&x.to===req.to);
+  if(!m) return null;
+  const mv={from:m.from,to:m.to,double:!!m.double};
+  const piece=st.board[mv.from];
+  const res=applyMoveToBoard(st.board,mv);
+  st.board=res.board;
+  if(st.turn==='b') st.fullmove++;
+  st.turn=opp(st.turn);
+  st.history.push({from:mv.from,to:mv.to,piece:'C',color:piece.c,captured:res.captured?true:false,double:mv.double});
+  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+  if(!st.over) checkEmpowerment(st);
+  if(!st.over&&!st.pendingEmpower) ensureTurnCanMove(st);
+  return mv;
+}
+// Bot's empowerment pick: rook when more enemies share a rank/file with
+// the survivor, bishop when more share a diagonal; ties go rook.
+function botEmpowerChoice(st,color){
+  const idx=solePiece(st.board,color); if(idx<0) return 'R';
+  const size=st.size||8;
+  const r=(idx/size)|0, c=idx%size; let orth=0, diag=0;
+  for(let i=0;i<st.board.length;i++){ const p=st.board[i]; if(!p||p.c===color) continue;
+    const rr=(i/size)|0, cc=i%size;
+    if(rr===r||cc===c) orth++;
+    if(Math.abs(rr-r)===Math.abs(cc-c)) diag++;
+  }
+  return orth>=diag?'R':'B';
+}
+function botMove(st,difficulty){
+  const moves=legalMoves(st); if(!moves.length) return null;
+  if(difficulty==='easy') return moves[Math.floor(Math.random()*moves.length)];
+  let best=null,bestScore=-1e9;
+  for(const m of moves){
+    let s=Math.random()*1.5;
+    const tgt=st.board[m.to];
+    if(tgt){ s+=10; if(tgt.empowered) s+=15; }
+    // prefer landing on the river exit / forward progress slightly
+    const r=(m.to/(st.size||8))|0; s+=(st.turn==='w'?-r:r)*0.05;
+    if(s>bestScore){ bestScore=s; best=m; }
+  }
+  return best;
+}
+function boardKey(st){
+  let s=''; for(const p of st.board) s+=p?p.c+(p.empowered||'C')+(p.hasMoved?'m':''):'..';
+  return s+st.turn+'|'+(st.size||8)+'|'+st.history.length+'|'+(st.river||[]).join(',');
+}
+function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,river:st.river,whiteFormation:st.whiteFormation,blackFormation:st.blackFormation,turn:st.turn,size:st.size||8,fullmove:st.fullmove,history:st.history,over:st.over,winner:st.winner,reason:st.reason,passNote:st.passNote||'',pendingEmpower:st.pendingEmpower||null}; }
+function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{c:p.c,empowered:p.empowered||null,hasMoved:!!p.hasMoved}:null); st.river=(s.river||[]).slice(); st.pendingEmpower=s.pendingEmpower||null; st.size=s.size||8; return st; }
+if(typeof module!=='undefined'&&module.exports){ module.exports={FORMATIONS,FIXED_RIVER,FIXED_RIVER_12,genSetup,placeFormation,firstTurnFor,countPieces,solePiece,riverConnected,isRiver,pseudoMoves,applyMoveToBoard,legalMoves,evaluate,ensureTurnCanMove,checkEmpowerment,resolveEmpower,newGame,doMove,botMove,botEmpowerChoice,serializeState,deserializeState,boardKey,mulberry32,sqName,opp}; }
+</script>
+
+<script>
+"use strict";
+/* ================= UI + multiplayer ================= */
+let mode='main';
+let state=null;
+let myColor=null;          // 'w' | 'b' | null (local/bot: both)
+let playMode='local';      // local | bot | online
+let botLevel='medium';
+let flipped=false;
+let soundOn=true;
+let selected=-1, legalCache=[];
+let peer=null, conn=null, isHost=false, roomCode=null, waitingForGuest=false;
+let gameId=0; // increments every startGame; bot timeouts check it so a stale timeout never moves in a newer game
+let lastAckedN=-1, resendTimer=null, heartbeatTimer=null, helloTimer=null, stateReceived=false;
+let currentSetupOpts=null;
+function boardHashOf(st){ let h=5381; const s=boardKey(st); for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h; }
+const $=id=>document.getElementById(id);
+const myName=()=>($('nameInput').value||'').trim()||'Player';
+const GLYPH={w:'♘',b:'♞'};
+const EMP_GLYPH={R:'♜',B:'♝'};
+
+function beep(freq,dur){ if(!soundOn) return; try{ const ctx=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=freq; o.type='sine'; g.gain.value=0.06; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur); o.stop(ctx.currentTime+dur); }catch(e){} }
+function show(id,on){ $(id).classList.toggle('hidden',!on); }
+function setMenuMsg(t){ $('menuMsg').textContent=t||''; }
+
+/* ---- mode picker ---- */
+function setupOptsFromUI(){
+  const bs=parseInt(($('boardSize').value||'8'),10)||8;
+  if(mode==='choose') return {whiteFormation:$('whiteFormation').value,blackFormation:$('blackFormation').value,riverMode:$('riverToggle').value==='on'?'fixed':'off',boardSize:bs};
+  if(mode==='main') return {riverMode:$('riverToggle').value==='on'?'fixed':'off',boardSize:bs};
+  return {boardSize:bs};
+}
+function pickMode(m){
+  mode=m;
+  $('modeChoose').classList.toggle('sel',m==='choose');
+  $('modeMain').classList.toggle('sel',m==='main');
+  $('modeRandom').classList.toggle('sel',m==='random');
+  show('chooseOpts',m==='choose');
+  show('riverOpts',m!=='random');
+  show('randomNote',m==='random');
+  const bs=parseInt(($('boardSize').value||'8'),10)||8;
+  const ranks=bs===12?'6–7':'4–5';
+  $('riverNote').textContent=m==='random'?('Random river: one square per file, ranks '+ranks+', always connected.'):('Fixed river across ranks '+ranks+', one square per file.');
+}
+$('modeChoose').onclick=()=>pickMode('choose');
+$('modeMain').onclick=()=>pickMode('main');
+$('modeRandom').onclick=()=>pickMode('random');
+$('boardSize').onchange=()=>pickMode(mode);
+$('botLevel').onchange=e=>botLevel=e.target.value;
+
+/* ---- board rendering ---- */
+const boardEl=$('board');
+const squares=[];
+function buildBoard(size){
+  boardEl.innerHTML='';
+  squares.length=0;
+  boardEl.style.gridTemplateColumns='repeat('+size+',1fr)';
+  boardEl.style.gridTemplateRows='repeat('+size+',1fr)';
+  boardEl.classList.toggle('size12',size===12);
+  for(let i=0;i<size*size;i++){ const d=document.createElement('div'); d.className='sq'; d.dataset.idx=i;
+    d.addEventListener('click',()=>onSquare(parseInt(d.dataset.idx,10))); squares.push(d); boardEl.appendChild(d); }
+}
+buildBoard(8);
+function render(){
+  if(!state) return;
+  if(squares.length!==state.size*state.size) buildBoard(state.size);
+  const riverSet=new Set(state.river||[]);
+  const n=state.size*state.size;
+  const display = flipped ? [...Array(n).keys()].map(i=>n-1-i) : [...Array(n).keys()];
+  display.forEach((boardIdx,pos)=>{ const el=squares[pos]; const r=(boardIdx/state.size)|0, c=boardIdx%state.size;
+    el.dataset.idx=boardIdx;
+    el.className='sq '+(((r+c)%2===0)?'light':'dark')+(riverSet.has(boardIdx)?' river':'');
+    const p=state.board[boardIdx];
+    let html='';
+    if(p){ html+='<span class="pc '+p.c+'">'+GLYPH[p.c]+'</span>';
+      if(p.empowered){ html+='<span class="emp">'+EMP_GLYPH[p.empowered]+'</span>'; el.classList.add('empowered'); } }
+    const last=state.history[state.history.length-1];
+    if(last&&last.from!==last.to&&(last.from===boardIdx||last.to===boardIdx)) el.classList.add('last');
+    if(selected===boardIdx) el.classList.add('sel');
+    const dest=legalCache.find(m=>m.to===boardIdx);
+    if(selected>=0&&dest) html+= state.board[boardIdx] ? '<span class="ring"></span>' : '<span class="dot"></span>';
+    if(c===0) html+='<span class="coord r">'+(state.size-r)+'</span>';
+    if(r===state.size-1) html+='<span class="coord f">'+FILES[c]+'</span>';
+    el.innerHTML=html;
+  });
+  // status
+  const wn=countPieces(state.board,'w'), bn=countPieces(state.board,'b');
+  const turnName=state.turn==='w'?'White':'Black';
+  if(state.over){
+    $('statusBox').innerHTML=(state.winner?(state.winner==='w'?'♘ White wins!':'♞ Black wins!'):'🤝 Draw')+'<small>'+state.reason+'</small>';
+  } else if(state.pendingEmpower){
+    const who=state.pendingEmpower==='w'?'White':'Black';
+    $('statusBox').innerHTML=who+' — last unit standing!<small>'+(humanControls(state.pendingEmpower)?'Choose its extra power: Rook or Bishop.':(playMode==='bot'?'The bot is choosing its extra power…':'Waiting for '+who.toLowerCase()+' to choose its extra power…'))+(state.passNote?'<br>'+state.passNote:'')+'</small>';
+  } else {
+    $('statusBox').innerHTML=turnName+' to move<small>'+(playMode==='online'?(myColor===state.turn?'Your move.':'Waiting for opponent…'):(playMode==='bot'?(state.turn==='b'?'Bot is thinking…':'Your move.'):''))+(state.passNote?'<br>'+state.passNote:'')+'</small>';
+  }
+  const modeLabel=state.mode==='choose'?'Choose Formations':state.mode==='main'?'Mongol vs Roman':'Random';
+  $('pillsBox').innerHTML='<span class="pill'+(wn===0?' dead':'')+'">♘ White: '+wn+' • '+FORMATIONS[state.size][state.whiteFormation].name+'</span><span class="pill'+(bn===0?' dead':'')+'">♞ Black: '+bn+' • '+FORMATIONS[state.size][state.blackFormation].name+'</span><span class="pill">'+state.size+'×'+state.size+'</span><span class="pill">Seed '+state.seed+'</span><span class="pill">'+modeLabel+'</span><span class="pill">River '+(state.river&&state.river.length?'on':'off')+'</span>';
+  let capW=0, capB=0;
+  for(const h of state.history){ if(h.captured){ if(h.color==='w') capW++; else capB++; } }
+  $('capWhite').textContent='♘ White took: '+(capW?('♞ × '+capW):'—');
+  $('capBlack').textContent='♞ Black took: '+(capB?('♘ × '+capB):'—');
+  $('movesBox').innerHTML=state.history.length?state.history.map((h,i)=>{
+    if(h.empower) return '<b>★ '+(h.color==='w'?'White':'Black')+' last unit gains '+(h.empower==='R'?'Rook ♜':'Bishop ♝')+'</b>';
+    const n=Math.floor(i/2)+1, pre=(i%2===0)?(n+'. '):'';
+    return pre+'<b>C</b> '+sqName(h.from,state.size)+(h.captured?'x':'–')+sqName(h.to,state.size)+(h.double?' (2)':'');
+  }).join(' &nbsp; '):'No moves yet — the formations are set, now you ride.';
+  if(state.over) showOver();
+  showEmpowerModalIfNeeded();
+}
+function humanControls(color){
+  if(playMode==='local') return true;
+  if(playMode==='bot') return color==='w';
+  return color===myColor;
+}
+function showEmpowerModalIfNeeded(){
+  if(!state) { show('empowerModal',false); return; }
+  if(state.pendingEmpower&&humanControls(state.pendingEmpower)){
+    $('empowerText').textContent=(state.pendingEmpower==='w'?'White':'Black')+' — your last Cavalaria earns an extra power. Choose one — it keeps its knight and pawn moves too.';
+    show('empowerModal',true);
+  } else show('empowerModal',false);
+}
+function showOver(){
+  if(!state||!state.over) return;
+  $('overTitle').textContent=state.winner?(state.winner==='w'?'♘ White wins!':'♞ Black wins!'):'🤝 Draw';
+  $('overReason').textContent=state.reason;
+  show('overModal',true);
+}
+function hideOver(){ show('overModal',false); }
+
+/* ---- interaction ---- */
+function myTurn(){ if(!state||state.over||state.pendingEmpower) return false; if(playMode==='local') return true; if(playMode==='bot') return state.turn==='w'; return state.turn===myColor; }
+function onSquare(i){
+  if(!state||state.over) return;
+  if(!myTurn()) return;
+  if(selected>=0){
+    const dest=legalCache.find(m=>m.to===i);
+    if(dest){ attemptMove(selected,i); return; }
+  }
+  const p=state.board[i];
+  if(p&&p.c===state.turn){ selected=i; legalCache=legalMoves(state).filter(m=>m.from===i); render(); }
+  else { selected=-1; legalCache=[]; render(); }
+}
+function attemptMove(from,to){ finishMove(from,to); }
+function finishEmpower(choice){
+  if(!state||!state.pendingEmpower) return;
+  if(!humanControls(state.pendingEmpower)) return;
+  const ok=resolveEmpower(state,choice);
+  if(!ok) return;
+  beep(660,0.15);
+  render();
+  if(playMode==='online') sendState();
+  maybeBotMove();
+}
+$('empowerRook').onclick=()=>finishEmpower('R');
+$('empowerBishop').onclick=()=>finishEmpower('B');
+// If the bot holds the last unit, it picks its own power, then moves.
+function maybeBotMove(){
+  if(playMode!=='bot'||!state||state.over) return;
+  const gid=gameId;
+  if(state.pendingEmpower==='b'){
+    setTimeout(()=>{ if(gid!==gameId||!state||state.over||state.pendingEmpower!=='b') return;
+      resolveEmpower(state,botEmpowerChoice(state,'b')); render(); maybeBotMove(); },450);
+    return;
+  }
+  if(state.turn!=='b') return;
+  setTimeout(()=>{ if(gid!==gameId||!state||state.over||state.turn!=='b'||state.pendingEmpower) return; const bm=botMove(state,botLevel); if(bm){ doMove(state,bm); beep(330,0.1); render(); maybeBotMove(); } },450);
+}
+function finishMove(from,to){
+  const mv=doMove(state,{from,to});
+  selected=-1; legalCache=[];
+  if(!mv){ render(); return; }
+  beep(state.history[state.history.length-1].captured?180:440,0.12);
+  render();
+  if(playMode==='online') sendState(); // full board, ack-tracked — not a fire-and-forget delta
+  maybeBotMove();
+}
+
+/* ---- starting games ---- */
+function startGame(m,seed,opts){
+  opts=opts||{};
+  playMode=opts.playMode||'local'; myColor=opts.myColor||null; isHost=!!opts.isHost; roomCode=opts.roomCode||null;
+  const so=opts.setupOpts||currentSetupOpts||setupOptsFromUI();
+  currentSetupOpts=so;
+  state=newGame(m,seed,Object.assign({},so,opts.board?{board:opts.board}:{}));
+  gameId++;
+  lastAckedN=-1; clearTimeout(resendTimer); stateReceived=(playMode!=='online'||isHost);
+  startHeartbeat();
+  flipped=(myColor==='b');
+  selected=-1; legalCache=[]; hideOver(); show('empowerModal',false);
+  show('menuScreen',false); show('gameScreen',true);
+  $('roomBox').classList.toggle('hidden',!roomCode);
+  if(roomCode) $('roomCodeText').textContent=roomCode;
+  $('connBox').innerHTML=opts.connText||(playMode==='online'?'Online game':'Local game');
+  render();
+  if(state.over) beep(220,0.3);
+}
+function backToMenu(){
+  try{ if(conn) conn.close(); }catch(e){}
+  try{ if(peer) peer.destroy(); }catch(e){}
+  peer=null; conn=null; roomCode=null; waitingForGuest=false;
+  stopHeartbeat(); stopHelloLoop(); clearTimeout(resendTimer);
+  setMenuMsg('');
+  hideOver(); show('empowerModal',false); show('gameScreen',false); show('menuScreen',true);
+}
+$('btnMenu').onclick=backToMenu;
+$('btnOverMenu').onclick=backToMenu;
+$('btnFlip').onclick=()=>{ flipped=!flipped; render(); };
+$('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=soundOn?'🔊 Sound on':'🔇 Sound off'; };
+$('btnCopy').onclick=async()=>{
+  const link=location.origin+location.pathname+'?room='+roomCode;
+  const txt='Cavalaria room '+roomCode+' — join me: '+link;
+  try{ await navigator.clipboard.writeText(txt); $('btnCopy').textContent='Copied!'; setTimeout(()=>$('btnCopy').textContent='Copy code / link',1500); }
+  catch(e){ prompt('Copy your room link:',txt); }
+};
+function startChosen(play,extra){
+  const so=setupOptsFromUI(); currentSetupOpts=so;
+  startGame(mode,randomSeed(),Object.assign({playMode:play,setupOpts:so},extra||{}));
+}
+$('btnLocal').onclick=()=>startChosen('local',{connText:'Local 2-player — same screen, pass &amp; play.'});
+$('btnBot').onclick=()=>startChosen('bot',{myColor:'w',connText:'You (White) vs Bot ('+botLevel+'). Bot plays Black.'});
+$('btnRematch').onclick=()=>requestRematch();
+$('btnOverRematch').onclick=()=>{ hideOver(); requestRematch(); };
+$('btnResign').onclick=()=>{
+  if(!state||state.over) return;
+  if(playMode==='online'&&conn&&conn.open) send({t:'resign',by:myColor});
+  const loser=playMode==='local'?state.turn:(myColor||state.turn);
+  state.over=true; state.winner=opp(loser); state.reason=(loser==='w'?'White':'Black')+' resigned.'; render();
+};
+function requestRematch(){
+  const m=state?state.mode:mode;
+  const so=currentSetupOpts||setupOptsFromUI();
+  if(playMode==='online'&&conn&&conn.open){
+    if(isHost){ const seed=randomSeed(); const nc=myColor==='w'?'b':'w'; myColor=nc;
+      send({t:'rematch',mode:m,seed,setupOpts:so,guestColor:opp(nc)});
+      startGame(m,seed,{playMode:'online',myColor:nc,isHost:true,roomCode,setupOpts:so,connText:'Online game — rematch! Colours swapped.'});
+    } else { send({t:'rematch-request',mode:m}); setMenuMsg('Rematch requested — waiting for host…'); }
+    return;
+  }
+  startGame(m,randomSeed(),{playMode,myColor:playMode==='bot'?'w':null,setupOpts:so,connText:playMode==='bot'?'You (White) vs Bot.':'Local 2-player — new setup!'});
+}
+
+/* ---- multiplayer (PeerJS) ---- */
+function peerIdFor(code){ return 'cavalaria-v1-'+code.toUpperCase(); }
+function makeCode(){ const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
+function send(obj){ try{ if(conn&&conn.open) conn.send(obj); }catch(e){} }
+/* ---- self-healing sync: full state + ack/resend + hello + heartbeat ----
+   A single lost message used to desync both boards forever (and the
+   receiver silently dropped moves that didn't match its stale board).
+   Now every move carries the whole board, must be acknowledged, is
+   resent until it is, and both sides compare fingerprints every 4s. */
+function sendState(){
+  if(!state) return;
+  send({t:'state',state:serializeState(state)});
+  armResend();
+}
+function armResend(){
+  clearTimeout(resendTimer);
+  const n=state.history.length; let tries=0;
+  const tick=()=>{
+    if(!state||!conn||!conn.open) return;
+    if(lastAckedN>=n||state.history.length!==n) return;
+    if(tries>=6) return;
+    tries++;
+    send({t:'state',state:serializeState(state)});
+    resendTimer=setTimeout(tick,1500);
+  };
+  resendTimer=setTimeout(tick,1500);
+}
+// Adopt an incoming full state. Newer always wins; on a tie the host wins.
+function adoptState(s){
+  if(!s||!state) return false;
+  const incoming=deserializeState(s);
+  const inN=incoming.history.length, myN=state.history.length;
+  const same=boardHashOf(state)===boardHashOf(incoming);
+  if(inN<myN){ sendState(); return false; }                    // sender is behind: heal them
+  if(inN===myN&&same){ send({t:'ack',n:inN}); return false; } // already in sync
+  if(inN===myN&&!same&&isHost){ sendState(); return false; }  // tie: host wins, I'm host
+  state=incoming; selected=-1; legalCache=[]; stateReceived=true;
+  currentSetupOpts={whiteFormation:incoming.whiteFormation,blackFormation:incoming.blackFormation,riverMode:incoming.river.length?'fixed':'off',boardSize:incoming.size||8};
+  send({t:'ack',n:inN});
+  render();
+  maybeBotMove();
+  return true;
+}
+function startFromState(s){
+  currentSetupOpts={whiteFormation:s.whiteFormation,blackFormation:s.blackFormation,riverMode:s.river.length?'fixed':'off',boardSize:s.size||8};
+  startGame(s.mode,s.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,setupOpts:currentSetupOpts,connText:'Online game — you are <b>Black</b>.'});
+  state=deserializeState(s);
+  stateReceived=true; send({t:'ack',n:state.history.length}); render();
+}
+function startHeartbeat(){
+  stopHeartbeat();
+  if(playMode!=='online') return;
+  heartbeatTimer=setInterval(()=>{
+    if(!state||!conn||!conn.open) return;
+    send({t:'ping',n:state.history.length,hash:boardHashOf(state)});
+  },4000);
+}
+function stopHeartbeat(){ clearInterval(heartbeatTimer); heartbeatTimer=null; }
+function startHelloLoop(){
+  stopHelloLoop();
+  helloTimer=setInterval(()=>{ if(!stateReceived) send({t:'hello'}); else stopHelloLoop(); },2000);
+  send({t:'hello'});
+}
+function stopHelloLoop(){ clearInterval(helloTimer); helloTimer=null; }
+function attachConn(c,asHost){
+  conn=c;
+  c.on('data',msg=>handleMsg(msg,asHost));
+  c.on('close',()=>{ stopHeartbeat(); stopHelloLoop(); if(state&&!state.over){ $('connBox').innerHTML='<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.'; } });
+  c.on('error',()=>{});
+  c.on('open',()=>{
+    $('connBox').innerHTML='<b>Connected!</b> '+(asHost?'Your friend joined. You are White.':'You joined. You are Black.');
+    if(asHost){ sendState(); }                 // full state, ack-tracked — guest adopts it
+    else { stateReceived=false; startHelloLoop(); } // keep asking until the board arrives
+  });
+}
+function handleMsg(msg,asHost){
+  if(!msg||typeof msg!=='object') return;
+  if(msg.t==='hello'){ if(state) sendState(); }
+  else if(msg.t==='ack'){ if(typeof msg.n==='number'&&msg.n>lastAckedN) lastAckedN=msg.n; }
+  else if(msg.t==='need-sync'){ sendState(); }
+  else if(msg.t==='ping'){
+    if(!state) return;
+    const myN=state.history.length, myH=boardHashOf(state);
+    if(msg.n>myN) send({t:'need-sync'});
+    else if(msg.n<myN) sendState();
+    else if(msg.hash!==myH){ if(isHost) sendState(); else send({t:'need-sync'}); }
+  }
+  else if(msg.t==='state'){
+    if(!state) startFromState(msg.state);
+    else adoptState(msg.state);
+  }
+  else if(msg.t==='resign'){
+    state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
+  } else if(msg.t==='rematch'){
+    startGame(msg.mode,msg.seed,{playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,setupOpts:msg.setupOpts,connText:'Online game — rematch! Colours swapped.'});
+  } else if(msg.t==='rematch-request'&&asHost){
+    requestRematch();
+  }
+}
+$('btnCreate').onclick=()=>{
+  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.'); return; }
+  const code=makeCode(); roomCode=code;
+  setMenuMsg('Creating room '+code+'…');
+  try{ if(peer) peer.destroy(); }catch(e){}
+  peer=new Peer(peerIdFor(code));
+  peer.on('open',()=>{
+    setMenuMsg('Room '+code+' is live — send the code to your friend.');
+    startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:code,setupOpts:setupOptsFromUI(),connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'});
+    waitingForGuest=true;
+  });
+  peer.on('connection',c=>{ waitingForGuest=false; attachConn(c,true); });
+  peer.on('error',err=>{ setMenuMsg('Could not create the room ('+(err&&err.type||'error')+'). Try again.'); });
+};
+$('btnJoin').onclick=()=>{
+  const code=($('joinCode').value||'').trim().toUpperCase();
+  if(!code){ setMenuMsg('Type a room code first.'); return; }
+  joinRoom(code);
+};
+function joinRoom(code){
+  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
+  roomCode=code; setMenuMsg('Joining room '+code+'…');
+  try{ if(peer) peer.destroy(); }catch(e){}
+  peer=new Peer();
+  peer.on('open',()=>{
+    const c=peer.connect(peerIdFor(code),{reliable:true});
+    attachConn(c,false);
+    c.on('open',()=>{ setMenuMsg('Joined room '+code+'! Waiting for the board…'); });
+    setTimeout(()=>{ if(!conn||!conn.open) setMenuMsg('Still trying to reach room '+code+' — is the code right, and is your friend\'s room still open?'); },6000);
+  });
+  peer.on('error',err=>{ setMenuMsg('Could not join room '+code+' ('+(err&&err.type||'error')+'). Double-check the code.'); });
+}
+/* Play Anyone: claim a lobby slot, or join the stranger waiting in one. */
+$('btnAnyone').onclick=async()=>{
+  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
+  setMenuMsg('Looking for an opponent…');
+  for(let slot=1;slot<=5;slot++){
+    const res=await tryLobbySlot(slot);
+    if(res==='wait'||res==='joined') return;
+  }
+  setMenuMsg('All lobby slots are busy right now — try again in a few seconds, or create a room instead.');
+};
+function tryLobbySlot(slot){
+  return new Promise(resolve=>{
+    const id='cavalaria-lobby-v1-'+slot;
+    let done=false;
+    const finish=v=>{ if(!done){ done=true; resolve(v); } };
+    let p;
+    try{ p=new Peer(id); }catch(e){ return finish('next'); }
+    const timer=setTimeout(()=>{ try{p.destroy();}catch(e){} finish('next'); },4000);
+    p.on('open',()=>{
+      clearTimeout(timer); peer=p; isHost=true; roomCode=null;
+      startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:null,setupOpts:setupOptsFromUI(),connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'});
+      setMenuMsg('Waiting for an opponent… (lobby slot '+slot+')');
+      p.on('connection',c=>{ attachConn(c,true); setMenuMsg('Opponent found — good luck!'); });
+      finish('wait');
+    });
+    p.on('error',err=>{
+      if(err&&err.type==='unavailable-id'){
+        clearTimeout(timer); try{p.destroy();}catch(e){}
+        // Someone is waiting in this slot: join them as challenger.
+        const p2=new Peer(); let done2=false;
+        const t2=setTimeout(()=>{ try{p2.destroy();}catch(e){} if(!done2){ done2=true; finish('next'); } },6000);
+        p2.on('open',()=>{
+          peer=p2; roomCode=null;
+          const c=p2.connect(id,{reliable:true});
+          attachConn(c,false);
+          c.on('open',()=>{ clearTimeout(t2); if(!done2){ done2=true; setMenuMsg('Opponent found — good luck!'); finish('joined'); } });
+          c.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
+        });
+        p2.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
+      } else { clearTimeout(timer); try{p.destroy();}catch(e){} finish('next'); }
+    });
+  });
+}
+/* Deep link: ?room=CODE joins that room on load */
+(function deepLink(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const room=(q.get('room')||'').trim().toUpperCase();
+    if(room){ $('joinCode').value=room; setMenuMsg('Room '+room+' detected — press Join room to enter.'); }
+  }catch(e){}
+})();
+if(typeof module!=='undefined'&&module.exports){ /* engine exports live in the first script block */ }
+</script>
+</body>
+</html>
