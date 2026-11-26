@@ -40,6 +40,7 @@ With the river on, ranks 4–5 (8×8) or 6–7 (12×12) hold a band of water —
 - **Leaving** one costs an extra square: a knight's jump from a river square is only **1 forward + 1 to the side** (a single diagonal step) instead of 2 + 1. A pawn leaving the river still steps 1 forward or captures 1 diagonally, but it can't double-step out of the river — the exit cost eats the second square.
 - The cost counts **once, at the start of the move**. Jumping *over* the river costs nothing extra, and landing back in the river costs nothing extra either.
 - The river penalty applies only to the knight's long leg; an empowered piece's slides are not shortened.
+- **Look:** the river is drawn as one flowing illustrated river over the board (a smooth curve through the river squares, grass and sand banks, grass tufts on the water's edge, seaweed and ripples in the water) — it crosses square edges and meanders into neighbouring squares, while the rules still use the squares underneath. Selection, last-move and empowered outlines are drawn in the same overlay so they stay visible above the water.
 
 ### The formations — 16 pieces a side (8×8) in three ranks, 28 a side (12×12) in four
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.5 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs -->
+<!-- Cavalaria v1.6 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -49,12 +49,12 @@ select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-r
 .game-layout{display:grid;grid-template-columns:minmax(0,640px) 340px;gap:16px;align-items:start;margin-top:12px}
 @media(max-width:900px){.game-layout{grid-template-columns:1fr}}
 .board-wrap{position:relative;width:100%;max-width:640px;margin:0 auto}
-.board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:3px solid #3a2f26;box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.board{position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:3px solid #3a2f26;box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.river-overlay{position:absolute;inset:0;z-index:1;pointer-events:none}
+.river-overlay svg{width:100%;height:100%;display:block}
 .sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;min-height:0}
 .sq.light{background:var(--light)}
 .sq.dark{background:var(--dark)}
-.sq.river{background:linear-gradient(135deg,var(--river) 0%,var(--river2) 100%)}
-.sq.river.light{background:linear-gradient(135deg,#3a7ab5 0%,#4a93d1 100%)}
 .sq .pc{font-size:clamp(28px,7.2vw,52px);line-height:1;pointer-events:none;z-index:2}
 .pc-img{width:84%;height:84%;object-fit:contain;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
 .board.size12 .pc{font-size:clamp(18px,4.2vw,34px)}
@@ -62,17 +62,13 @@ select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-r
 .sq .pc.w{color:#fafafa;text-shadow:0 1px 0 #222,0 0 3px #000,0 2px 4px rgba(0,0,0,.6)}
 .sq .pc.b{color:#151515;text-shadow:0 0 3px rgba(255,255,255,.75),0 1px 2px rgba(255,255,255,.4)}
 .sq .emp{position:absolute;right:4px;bottom:2px;font-size:clamp(14px,3vw,22px);line-height:1;z-index:3;pointer-events:none;color:var(--gold);text-shadow:0 0 4px #000,0 1px 2px #000}
-.sq.empowered{box-shadow:inset 0 0 0 3px var(--gold)}
-.sq.sel{box-shadow:inset 0 0 0 4px var(--gold)}
-.sq.last{box-shadow:inset 0 0 0 4px rgba(76,154,255,.85)}
-.sq .dot{position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(20,60,20,.45);z-index:1;pointer-events:none}
-.sq .ring{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(229,72,77,.9);z-index:1;pointer-events:none}
-.sq .coord{position:absolute;font-size:10px;font-weight:700;opacity:.75;z-index:1;pointer-events:none}
+.sq .dot{position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(20,60,20,.45);z-index:2;pointer-events:none}
+.sq .ring{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(229,72,77,.9);z-index:2;pointer-events:none}
+.sq .coord{position:absolute;font-size:10px;font-weight:700;opacity:.75;z-index:2;pointer-events:none}
 .sq .coord.f{left:3px;bottom:2px}
 .sq .coord.r{right:3px;top:2px}
 .sq.light .coord{color:#7a5a34}
 .sq.dark .coord{color:#f0d9b5}
-.sq.river .coord{color:#d6ecff}
 .status{font-size:17px;font-weight:800;padding:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-bottom:12px;line-height:1.4}
 .status small{display:block;font-weight:500;color:var(--mut);font-size:13px;margin-top:3px}
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -230,7 +226,7 @@ X X X X . . . . X X X X
   </div>
 </div>
 
-<footer> Cavalaria v1.5 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer> Cavalaria v1.6 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -563,6 +559,7 @@ $('botLevel').onchange=e=>botLevel=e.target.value;
 /* ---- board rendering ---- */
 const boardEl=$('board');
 const squares=[];
+let riverOverlay=null;
 function buildBoard(size){
   boardEl.innerHTML='';
   squares.length=0;
@@ -571,30 +568,96 @@ function buildBoard(size){
   boardEl.classList.toggle('size12',size===12);
   for(let i=0;i<size*size;i++){ const d=document.createElement('div'); d.className='sq'; d.dataset.idx=i;
     d.addEventListener('click',()=>onSquare(parseInt(d.dataset.idx,10))); squares.push(d); boardEl.appendChild(d); }
+  riverOverlay=document.createElement('div');
+  riverOverlay.className='river-overlay';
+  boardEl.appendChild(riverOverlay);
+}
+
+/* ---- river + highlight overlay (one SVG over the board) ----
+   The river is a smooth curve through the river squares, drawn as layered
+   strokes (grass rim, sand rim, water) so it flows across squares instead
+   of stopping at their edges, with grass tufts on the banks and seaweed in
+   the water. Selection / last-move / empowered outlines live here too, so
+   they stay visible above the water. Coordinates are display coordinates
+   (the board flips), in a 0..100 viewBox. */
+function smoothPath(pts){
+  if(pts.length<2) return '';
+  let d='M'+pts[0].x.toFixed(2)+' '+pts[0].y.toFixed(2);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[Math.max(0,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
+    const c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+    const c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
+    d+='C'+c1x.toFixed(2)+' '+c1y.toFixed(2)+' '+c2x.toFixed(2)+' '+c2y.toFixed(2)+' '+p2.x.toFixed(2)+' '+p2.y.toFixed(2);
+  }
+  return d;
+}
+function boardOverlaySVG(){
+  if(!state) return '';
+  const size=state.size, cell=100/size, n=size*size;
+  const disp=i=>flipped? n-1-i : i;
+  const rc=d=>{ const r=(d/size)|0, c=d%size; return {x:(c+0.5)*cell, y:(r+0.5)*cell}; };
+  const f2=v=>Math.round(v*100)/100;
+  let s='<defs><linearGradient id="rivw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc0f0"/><stop offset=".5" stop-color="#2f6fb2"/><stop offset="1" stop-color="#7cc0f0"/></linearGradient></defs>';
+  const river=[...(state.river||[])].sort((a,b)=>(a%size)-(b%size));
+  if(river.length){
+    const pts=river.map(i=>rc(disp(i)));
+    const ext=[{x:-cell*0.6,y:pts[0].y},...pts,{x:100+cell*0.6,y:pts[pts.length-1].y}];
+    const path=smoothPath(ext);
+    for(const i of river){ const d=disp(i), r=(d/size)|0, c=d%size;
+      s+='<rect x="'+f2(c*cell+0.6)+'" y="'+f2(r*cell+0.6)+'" width="'+f2(cell-1.2)+'" height="'+f2(cell-1.2)+'" rx="1.5" fill="rgba(110,170,80,0.30)"/>';
+    }
+    s+='<path d="'+path+'" fill="none" stroke="#7fae5a" stroke-width="'+f2(cell*0.88)+'" stroke-linecap="round" stroke-linejoin="round"/>';
+    s+='<path d="'+path+'" fill="none" stroke="#d9c08a" stroke-width="'+f2(cell*0.76)+'" stroke-linecap="round" stroke-linejoin="round"/>';
+    s+='<path d="'+path+'" fill="none" stroke="url(#rivw)" stroke-width="'+f2(cell*0.60)+'" stroke-linecap="round" stroke-linejoin="round"/>';
+    for(let k=0;k<pts.length;k++){
+      const prev=pts[Math.max(0,k-1)], next=pts[Math.min(pts.length-1,k+1)];
+      let tx=next.x-prev.x, ty=next.y-prev.y; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl;
+      const px=-ty, py=tx, cx=pts[k].x, cy=pts[k].y;
+      const j1=(((k*37)%10)/10-0.5), j2=(((k*53)%10)/10-0.5), j3=(((k*29)%10)/10-0.5);
+      const ang=Math.atan2(ty,tx)*180/Math.PI;
+      const tuft=(x,y,dx,dy)=>{
+        const a=Math.atan2(dx,-dy)*180/Math.PI;
+        return '<g transform="translate('+f2(x)+' '+f2(y)+') rotate('+f2(a)+')" stroke="#4c8a3f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q -1.2 -2.5 -2.6 -3.6"/><path d="M0 0 Q 0 -3 -0.2 -4.6"/><path d="M0 0 Q 1.2 -2.5 2.6 -3.6"/></g>';
+      };
+      s+=tuft(cx+px*cell*0.47+tx*j1*cell*0.2, cy+py*cell*0.47+ty*j1*cell*0.2, px, py);
+      s+=tuft(cx-px*cell*0.47+tx*j2*cell*0.2, cy-py*cell*0.47+ty*j2*cell*0.2, -px, -py);
+      const wx=cx+tx*cell*0.28, wy=cy+ty*cell*0.28;
+      s+='<g transform="translate('+f2(wx)+' '+f2(wy)+') rotate('+f2(ang)+')" stroke="rgba(255,255,255,0.55)" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M-3 0 Q -1.5 -1.2 0 0 Q 1.5 1.2 3 0"/></g>';
+      const sx=cx+px*cell*0.12+tx*j3*cell*0.25, sy=cy+py*cell*0.12+ty*j3*cell*0.25;
+      s+='<g transform="translate('+f2(sx)+' '+f2(sy)+') rotate('+f2(ang+18)+')" stroke="#2e7d4f" stroke-width="0.8" stroke-linecap="round" fill="none"><path d="M0 0 Q 1 -1.5 0 -3 Q -1 -4.5 0 -6"/></g>';
+      s+='<g transform="translate('+f2(sx+1.6)+' '+f2(sy+1.2)+') rotate('+f2(ang-14)+')" stroke="#2e7d4f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q 0.8 -1.2 0 -2.4 Q -0.8 -3.6 0 -4.6"/></g>';
+    }
+  }
+  const outline=(boardIdx,color)=>{
+    const d=disp(boardIdx), r=(d/size)|0, c=d%size;
+    s+='<rect x="'+f2(c*cell+0.5)+'" y="'+f2(r*cell+0.5)+'" width="'+f2(cell-1)+'" height="'+f2(cell-1)+'" rx="1.2" fill="none" stroke="'+color+'" stroke-width="1.1"/>';
+  };
+  const last=state.history[state.history.length-1];
+  if(last&&last.from!==last.to){ outline(last.from,'#4c9aff'); outline(last.to,'#4c9aff'); }
+  if(selected>=0) outline(selected,'#f2c14e');
+  for(let i=0;i<n;i++) if(state.board[i]&&state.board[i].empowered) outline(i,'#f2c14e');
+  return s;
 }
 buildBoard(8);
 function render(){
   if(!state) return;
   if(squares.length!==state.size*state.size) buildBoard(state.size);
-  const riverSet=new Set(state.river||[]);
   const n=state.size*state.size;
   const display = flipped ? [...Array(n).keys()].map(i=>n-1-i) : [...Array(n).keys()];
   display.forEach((boardIdx,pos)=>{ const el=squares[pos]; const r=(boardIdx/state.size)|0, c=boardIdx%state.size;
     el.dataset.idx=boardIdx;
-    el.className='sq '+(((r+c)%2===0)?'light':'dark')+(riverSet.has(boardIdx)?' river':'');
+    el.className='sq '+(((r+c)%2===0)?'light':'dark');
     const p=state.board[boardIdx];
     let html='';
     if(p){ html+='<img class="pc-img" src="'+(p.c==='w'?PIECE_W:PIECE_B)+'" alt="">';
-      if(p.empowered){ html+='<span class="emp">'+EMP_GLYPH[p.empowered]+'</span>'; el.classList.add('empowered'); } }
-    const last=state.history[state.history.length-1];
-    if(last&&last.from!==last.to&&(last.from===boardIdx||last.to===boardIdx)) el.classList.add('last');
-    if(selected===boardIdx) el.classList.add('sel');
+      if(p.empowered){ html+='<span class="emp">'+EMP_GLYPH[p.empowered]+'</span>'; } }
     const dest=legalCache.find(m=>m.to===boardIdx);
     if(selected>=0&&dest) html+= state.board[boardIdx] ? '<span class="ring"></span>' : '<span class="dot"></span>';
     if(c===0) html+='<span class="coord r">'+(state.size-r)+'</span>';
     if(r===state.size-1) html+='<span class="coord f">'+FILES[c]+'</span>';
     el.innerHTML=html;
   });
+  if(riverOverlay) riverOverlay.innerHTML='<svg viewBox="0 0 100 100">'+boardOverlaySVG()+'</svg>';
   // status
   const wn=countPieces(state.board,'w'), bn=countPieces(state.board,'b');
   const turnName=state.turn==='w'?'White':'Black';
