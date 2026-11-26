@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.1 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards -->
+<!-- Cavalaria v1.2 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, custom pawn-riding-horse piece symbol -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -56,6 +56,9 @@ select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-r
 .sq.river{background:linear-gradient(135deg,var(--river) 0%,var(--river2) 100%)}
 .sq.river.light{background:linear-gradient(135deg,#3a7ab5 0%,#4a93d1 100%)}
 .sq .pc{font-size:clamp(28px,7.2vw,52px);line-height:1;pointer-events:none;z-index:2}
+.pc-svg{width:84%;height:84%;pointer-events:none;z-index:2}
+.pc-svg.w{color:#fff;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+.pc-svg.b{color:#1b1b1b;filter:drop-shadow(0 1px 1px rgba(255,255,255,.35))}
 .board.size12 .pc{font-size:clamp(18px,4.2vw,34px)}
 .board.size12 .emp{font-size:clamp(10px,2vw,15px)}
 .sq .pc.w{color:#fafafa;text-shadow:0 1px 0 #222,0 0 3px #000,0 2px 4px rgba(0,0,0,.6)}
@@ -96,6 +99,22 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
+<!-- Custom Cavalaria piece symbol: a pawn riding a horse (also saved as piece.svg) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="piece-cavalaria" viewBox="0 0 120 100"><g fill="currentColor">
+<path d="M22 52 C13 55 8 65 9 76 C10 81 14 83 15 79 C17 71 19 62 24 57 Z"/>
+<path d="M20 52 C28 46 46 45 62 46 C70 42 77 34 83 26 L86 20 L90 26 C95 28 101 31 106 36 C109 40 108 44 103 46 C97 48 90 47 85 44 C80 48 75 54 72 60 C70 64 66 66 60 67 C48 69 38 68 34 65 C26 64 20 60 20 52 Z"/>
+<path d="M60 47 C68 41 76 33 83 25 L87 28 L82 34 L86 37 L80 41 L84 44 L77 48 L71 50 Z"/>
+<path d="M84 25 L86 14 L91 22 Z"/>
+<path d="M90 23 L94 16 L96 24 Z"/>
+<path d="M58 60 L66 60 L68 96 L57 96 Z"/>
+<path d="M68 60 L76 60 L79 96 L69 96 Z"/>
+<path d="M24 60 L32 60 L34 96 L23 96 Z"/>
+<path d="M34 60 L42 60 L45 96 L34 96 Z"/>
+<path d="M36 47 L54 47 L58 56 L32 56 Z"/>
+<rect x="42" y="37" width="6" height="11"/>
+<rect x="38" y="34" width="14" height="4" rx="2"/>
+<circle cx="45" cy="27" r="8.5"/>
+</g></symbol></defs></svg>
 <div class="wrap">
 <header>
   <div><div class="logo">🐎 CAVALARIA</div><div class="tag">Cavalry chess — every piece is a knight and a pawn. Free forever.</div></div>
@@ -229,7 +248,7 @@ X X X X . . . . X X X X
   </div>
 </div>
 
-<footer> Cavalaria v1.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer> Cavalaria v1.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -581,7 +600,7 @@ function render(){
     el.className='sq '+(((r+c)%2===0)?'light':'dark')+(riverSet.has(boardIdx)?' river':'');
     const p=state.board[boardIdx];
     let html='';
-    if(p){ html+='<span class="pc '+p.c+'">'+GLYPH[p.c]+'</span>';
+    if(p){ html+='<svg class="pc-svg '+p.c+'" viewBox="0 0 120 100"><use href="#piece-cavalaria"/></svg>';
       if(p.empowered){ html+='<span class="emp">'+EMP_GLYPH[p.empowered]+'</span>'; el.classList.add('empowered'); } }
     const last=state.history[state.history.length-1];
     if(last&&last.from!==last.to&&(last.from===boardIdx||last.to===boardIdx)) el.classList.add('last');
