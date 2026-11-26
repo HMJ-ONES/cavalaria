@@ -40,7 +40,7 @@ With the river on, ranks 4–5 (8×8) or 6–7 (12×12) hold a band of water —
 - **Leaving** one costs an extra square: a knight's jump from a river square is only **1 forward + 1 to the side** (a single diagonal step) instead of 2 + 1. A pawn leaving the river still steps 1 forward or captures 1 diagonally, but it can't double-step out of the river — the exit cost eats the second square.
 - The cost counts **once, at the start of the move**. Jumping *over* the river costs nothing extra, and landing back in the river costs nothing extra either.
 - The river penalty applies only to the knight's long leg; an empowered piece's slides are not shortened.
-- **Look:** the river is drawn as one flowing illustrated river over the board (a smooth curve through the river squares, grass and sand banks, grass tufts on the water's edge, seaweed and ripples in the water) — it crosses square edges and meanders into neighbouring squares, while the rules still use the squares underneath. Selection, last-move and empowered outlines are drawn in the same overlay so they stay visible above the water.
+- **Look:** the river is drawn as one flowing illustrated river over the board (a smooth curve through the river squares, grass and sand banks, grass tufts on the water's edge, seaweed and ripples in the water) — it crosses square edges and meanders into neighbouring squares, while the rules still use the squares underneath. The tufts, weed and ripples are placed unevenly from the game's seed, so no two stretches of bank look alike. Selection, last-move and empowered outlines are drawn in the same overlay so they stay visible above the water.
 
 ### The formations — 16 pieces a side (8×8) in three ranks, 28 a side (12×12) in four
 
@@ -84,9 +84,9 @@ X X X X . . . . X X X X
 
 | Mode | White | Black | River | Who starts |
 |---|---|---|---|---|
-| **1 — Choose Formations** | You pick: Roman or Mongolian | You pick: Roman or Mongolian | On (fixed) or off, you pick | The Mongolian side; White if both sides match |
-| **2 — Main: Mongol vs Roman** | Mongolian | Roman | On (fixed) or off, you pick | White — the Mongolian side |
-| **3 — Random** | Randomly Roman or Mongolian | Randomly Roman or Mongolian | Always on, random shape | The Mongolian side; White if both sides match |
+| **1 — Choose Formations** | You pick: Roman or Mongolian | You pick: Roman or Mongolian | On (fixed) or off, you pick | White |
+| **2 — Main: Mongol vs Roman** | Mongolian | Roman | On (fixed) or off, you pick | White |
+| **3 — Random** | Randomly Roman or Mongolian | Randomly Roman or Mongolian | Always on, random shape | White |
 
 **Random river, honestly random.** One river square per file, on rank 4 or 5 (8×8) or rank 6 or 7 (12×12) — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank. Both the random formations and the random river come from a visible **seed**, so any setup can be reproduced and verified.
 

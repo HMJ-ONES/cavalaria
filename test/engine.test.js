@@ -65,7 +65,7 @@ console.log('The user\'s example board (White Roman, Black Mongolian, fixed rive
   }
   check('example board pieces match exactly', ok);
   check('fixed river is ranks 5+4, a/b/g/h + c/d/e/f', JSON.stringify(s.river) === JSON.stringify([24,25,30,31,34,35,36,37]));
-  check('Black Mongolian moves first in the example (Mongolian side starts)', s.turn === 'b');
+  check('White moves first in the example', s.turn === 'w');
 }
 
 console.log('Modes:');
@@ -77,7 +77,8 @@ console.log('Modes:');
   const mainOff = E.genSetup('main', 7, { riverMode: 'off' });
   check('Main with river off: no river squares', mainOff.river.length === 0);
   check('firstTurnFor: mongol vs roman -> w', E.firstTurnFor('mongolian', 'roman') === 'w');
-  check('firstTurnFor: roman vs mongol -> b', E.firstTurnFor('roman', 'mongolian') === 'b');
+  check('firstTurnFor: roman vs mongol -> w (White always first)', E.firstTurnFor('roman', 'mongolian') === 'w');
+  check('firstTurnFor: same formation -> w', E.firstTurnFor('roman', 'roman') === 'w');
   check('firstTurnFor: same formation -> w', E.firstTurnFor('roman', 'roman') === 'w' && E.firstTurnFor('mongolian', 'mongolian') === 'w');
   const choose = E.genSetup('choose', 7, { whiteFormation: 'roman', blackFormation: 'mongolian', riverMode: 'off' });
   check('Choose: picks are honoured, river off', choose.whiteFormation === 'roman' && choose.blackFormation === 'mongolian' && choose.river.length === 0);
@@ -305,7 +306,7 @@ console.log('The user\'s 12x12 board (White Roman, Black Mongolian, fixed river)
   }
   check('12x12 example board pieces match exactly', ok);
   check('12x12 fixed river is ranks 7+6, a/b/c/j/k/l + d/e/f/g/h/i', JSON.stringify(s.river) === JSON.stringify([60,61,62,69,70,71,75,76,77,78,79,80]));
-  check('Black Mongolian moves first on the 12x12 example too', s.turn === 'b');
+  check('White moves first on the 12x12 example too', s.turn === 'w');
 }
 
 console.log('12x12 fixed river:');

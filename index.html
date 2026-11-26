@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.6 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river -->
+<!-- Cavalaria v1.7 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -111,7 +111,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
       </button>
       <button class="mode sel" id="modeMain" type="button">
         <span class="dice">🐎</span><b>2 &nbsp;Main — Mongol vs Roman</b>
-        <p><b style="color:#fff">White rides Mongolian, Black rides Roman.</b> The Mongolian side always moves first. River on or off, your call.</p>
+        <p><b style="color:#fff">White rides Mongolian, Black rides Roman.</b> White always moves first. River on or off, your call.</p>
       </button>
       <button class="mode" id="modeRandom" type="button">
         <span class="dice">🎲</span><b>3 &nbsp;Random</b>
@@ -135,7 +135,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
       <span style="color:var(--mut);font-size:13px">Applies to all modes and all ways to play. Joining a room uses the host's board.</span>
     </div>
     <div id="randomNote" class="row hidden">
-      <span style="color:var(--mut);font-size:13px">Random mode: formations are drawn per side (Roman or Mongolian each), the river is always on with a random connected shape — one river square per file, never two in the same file. The Mongolian side moves first; if both sides draw the same formation, White moves first.</span>
+      <span style="color:var(--mut);font-size:13px">Random mode: formations are drawn per side (Roman or Mongolian each), the river is always on with a random connected shape — one river square per file, never two in the same file. White always moves first.</span>
     </div>
     <div class="row">
       <label for="nameInput" style="color:var(--mut);font-size:14px">Your name</label>
@@ -164,7 +164,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
       <li><b>The river slows you down.</b> Entering a river square is a normal move. <b>Leaving</b> one costs an extra square: a knight's jump from a river square is only <b>1 forward + 1 to the side</b> (a single diagonal step) instead of 2 + 1. It only counts once, at the start of the move — jumping <i>over</i> the river, or landing in the river again, costs nothing extra. A pawn leaving the river still steps 1 forward or captures 1 diagonally — but it can't double-step out of the river (the exit cost eats the second square).</li>
       <li><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
       <li><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
-      <li><b>First move goes to the Mongolian side.</b> If both sides use the same formation, White moves first.</li>
+      <li><b>White always moves first</b>, in every mode — even Random.</li>
       <li><b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.</li>
       <li><b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.</li>
       <li><b>Board size.</b> The 12×12 board ("Grand") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.</li>
@@ -226,7 +226,7 @@ X X X X . . . . X X X X
   </div>
 </div>
 
-<footer> Cavalaria v1.6 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer> Cavalaria v1.7 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -306,10 +306,7 @@ function placeFormation(board,color,formationKey,size){
   }
 }
 function firstTurnFor(whiteFormation,blackFormation){
-  const wM=whiteFormation==='mongolian', bM=blackFormation==='mongolian';
-  if(wM&&!bM) return 'w';       // Mongolian side moves first
-  if(bM&&!wM) return 'b';
-  return 'w';                   // both the same formation: White starts
+  return 'w';                   // White always moves first, in every mode
 }
 // opts: {whiteFormation, blackFormation, riverMode:'off'|'fixed'|'random', boardSize:8|12}
 function genSetup(mode,seed,opts){
@@ -613,19 +610,31 @@ function boardOverlaySVG(){
       const prev=pts[Math.max(0,k-1)], next=pts[Math.min(pts.length-1,k+1)];
       let tx=next.x-prev.x, ty=next.y-prev.y; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl;
       const px=-ty, py=tx, cx=pts[k].x, cy=pts[k].y;
-      const j1=(((k*37)%10)/10-0.5), j2=(((k*53)%10)/10-0.5), j3=(((k*29)%10)/10-0.5);
+      // Seeded per-square randomness: the same game always draws the same
+      // river, but tufts, weed and ripples land unevenly — no two stretches
+      // of bank look alike.
+      const rnd=salt=>{ let h=(((state.seed>>>0)^0x9e3779b9^Math.imul(k+1,374761393)^Math.imul(salt+1,668265263))>>>0); h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))>>>0)/4294967296; };
       const ang=Math.atan2(ty,tx)*180/Math.PI;
-      const tuft=(x,y,dx,dy)=>{
-        const a=Math.atan2(dx,-dy)*180/Math.PI;
-        return '<g transform="translate('+f2(x)+' '+f2(y)+') rotate('+f2(a)+')" stroke="#4c8a3f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q -1.2 -2.5 -2.6 -3.6"/><path d="M0 0 Q 0 -3 -0.2 -4.6"/><path d="M0 0 Q 1.2 -2.5 2.6 -3.6"/></g>';
+      const tuft=(x,y,dx,dy,sc)=>{
+        const a=Math.atan2(dx,-dy)*180/Math.PI+(rnd(40)-0.5)*36;
+        return '<g transform="translate('+f2(x)+' '+f2(y)+') rotate('+f2(a)+') scale('+f2(sc)+')" stroke="#4c8a3f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q -1.2 -2.5 -2.6 -3.6"/><path d="M0 0 Q 0 -3 -0.2 -4.6"/><path d="M0 0 Q 1.2 -2.5 2.6 -3.6"/></g>';
       };
-      s+=tuft(cx+px*cell*0.47+tx*j1*cell*0.2, cy+py*cell*0.47+ty*j1*cell*0.2, px, py);
-      s+=tuft(cx-px*cell*0.47+tx*j2*cell*0.2, cy-py*cell*0.47+ty*j2*cell*0.2, -px, -py);
-      const wx=cx+tx*cell*0.28, wy=cy+ty*cell*0.28;
-      s+='<g transform="translate('+f2(wx)+' '+f2(wy)+') rotate('+f2(ang)+')" stroke="rgba(255,255,255,0.55)" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M-3 0 Q -1.5 -1.2 0 0 Q 1.5 1.2 3 0"/></g>';
-      const sx=cx+px*cell*0.12+tx*j3*cell*0.25, sy=cy+py*cell*0.12+ty*j3*cell*0.25;
-      s+='<g transform="translate('+f2(sx)+' '+f2(sy)+') rotate('+f2(ang+18)+')" stroke="#2e7d4f" stroke-width="0.8" stroke-linecap="round" fill="none"><path d="M0 0 Q 1 -1.5 0 -3 Q -1 -4.5 0 -6"/></g>';
-      s+='<g transform="translate('+f2(sx+1.6)+' '+f2(sy+1.2)+') rotate('+f2(ang-14)+')" stroke="#2e7d4f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q 0.8 -1.2 0 -2.4 Q -0.8 -3.6 0 -4.6"/></g>';
+      const bank=(side)=>{
+        const along=(rnd(side*3+1)-0.5)*cell*0.55, out=cell*(0.44+rnd(side*3+2)*0.07);
+        if(rnd(side*3+3)<0.82) s+=tuft(cx+side*px*out+tx*along, cy+side*py*out+ty*along, side*px, side*py, 0.75+rnd(side*3+4)*0.6);
+        if(rnd(side*3+5)<0.35) s+=tuft(cx+side*px*(out+cell*0.05)+tx*(along+cell*(0.2+rnd(side*3+6)*0.2)), cy+side*py*(out+cell*0.05)+ty*(along+cell*(0.2+rnd(side*3+6)*0.2)), side*px, side*py, 0.6+rnd(side*3+7)*0.4);
+      };
+      bank(1); bank(-1);
+      if(rnd(20)<0.62){
+        const wx=cx+tx*(rnd(21)-0.5)*cell*0.55+px*(rnd(22)-0.5)*cell*0.25, wy=cy+ty*(rnd(21)-0.5)*cell*0.55+py*(rnd(22)-0.5)*cell*0.25;
+        s+='<g transform="translate('+f2(wx)+' '+f2(wy)+') rotate('+f2(ang+(rnd(23)-0.5)*40)+') scale('+f2(0.8+rnd(24)*0.5)+')" stroke="rgba(255,255,255,0.55)" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M-3 0 Q -1.5 -1.2 0 0 Q 1.5 1.2 3 0"/></g>';
+      }
+      if(rnd(30)<0.62){
+        const sx=cx+px*(rnd(31)-0.5)*cell*0.3+tx*(rnd(32)-0.5)*cell*0.4, sy=cy+py*(rnd(31)-0.5)*cell*0.3+ty*(rnd(32)-0.5)*cell*0.4;
+        const sc1=0.7+rnd(33)*0.6;
+        s+='<g transform="translate('+f2(sx)+' '+f2(sy)+') rotate('+f2(ang+18+(rnd(34)-0.5)*30)+') scale('+f2(sc1)+')" stroke="#2e7d4f" stroke-width="0.8" stroke-linecap="round" fill="none"><path d="M0 0 Q 1 -1.5 0 -3 Q -1 -4.5 0 -6"/></g>';
+        if(rnd(35)<0.45) s+='<g transform="translate('+f2(sx+1.6)+' '+f2(sy+1.2)+') rotate('+f2(ang-14+(rnd(36)-0.5)*30)+') scale('+f2(0.6+rnd(37)*0.5)+')" stroke="#2e7d4f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q 0.8 -1.2 0 -2.4 Q -0.8 -3.6 0 -4.6"/></g>';
+      }
     }
   }
   const outline=(boardIdx,color)=>{
