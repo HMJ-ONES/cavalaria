@@ -148,8 +148,15 @@ console.log('Attributes resolve:');
   }
   const unknown = [...used].filter(k => !enKeys.includes(k));
   check('every data-i18n(*) attribute in index.html is a real key (' + used.size + ' used)', unknown.length === 0, JSON.stringify(unknown));
+  // textContent never parses HTML entities: a string used with data-i18n
+  // must not contain &nbsp; (or any &entity;) — it would show literally.
+  // (data-i18n-html strings go through innerHTML, so entities are fine there.)
+  const textKeys = [...html.matchAll(/data-i18n="([^"]+)"/g)].map(m => m[1]);
+  let ent = [];
+  for (const l of LANGS) for (const k of textKeys) if (/&[a-zA-Z]+;/.test(dict[l][k] || '')) ent.push(l + ':' + k);
+  check('no HTML entity in any data-i18n (textContent) string, all 7 languages (' + textKeys.length + ' keys)', ent.length === 0, JSON.stringify(ent.slice(0, 5)));
   check('no v1.7 left in the file', !html.includes('v1.7'));
-  check('footer key carries v1.8 in every language', LANGS.every(l => dict[l].footer.includes('v1.8')));
+  check('footer key carries v1.8.1 in every language', LANGS.every(l => dict[l].footer.includes('v1.8.1')));
 }
 
 console.log('Switching changes visible text (menu):');

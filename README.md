@@ -172,6 +172,11 @@ LICENSE               MIT
 wrangler.toml         Cloudflare Pages notes (Pages needs no config)
 ```
 
+## Versions
+
+- **v1.8.1** — mode titles no longer show a literal `&nbsp;`: the translated strings now use a real non-breaking space (`\u00A0`), because the menu sets titles with `textContent`, which never parses HTML entities. A test pins it: no HTML entity may appear in any `data-i18n` string in any language.
+- **v1.8** — 7-language switcher (EN/PT/ES/ZH/JA/FR/KO) at the top of the page, choice remembered, browser language auto-detected; formation cards show mini pictures of the real board.
+
 ## License
 
 MIT — do what you want with it.
