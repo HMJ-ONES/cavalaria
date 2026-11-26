@@ -2,7 +2,7 @@
 
 **A free browser chess variant where every piece is a cavalryman: a knight fused with a pawn, fighting over river terrain in real cavalry formations.**
 
-The piece symbol is custom: a classic knight (long face, arched neck, pedestal base) with a pawn — ball head, flared collar, tapered body — riding diagonally on the back of its neck, drawn as a single-colour SVG (`piece.svg`, also embedded in `index.html` so the page stays self-contained). The pawn stands clear of the horse with a small gap, so the square shows through between them. White and black pieces are the same shape in different colours.
+The piece art is Henrique's own PNGs: the outline version for white pieces, the solid black version for black pieces — a classic knight with a pawn riding diagonally on the back of its neck. The white background was made transparent (`tools/process_pieces.py`: flood-fill from the edges, so enclosed white — the outline piece's fill — stays opaque) and the PNGs are embedded in `index.html` as data URIs (`PIECE_W` / `PIECE_B`), because the GitHub push path is text-only and corrupts binary files. The artwork sources live as base64 text (`tools/src-white.jpg.b64`, `tools/src-black.jpg.b64`); re-run `python3 tools/process_pieces.py` to regenerate the pieces and re-embed them. `piece.svg` is the retired hand-drawn symbol, kept for reference only.
 
 Play it right now — no sign-up, no download, no cost. PC, mobile, and (probably not) your calculator.
 
