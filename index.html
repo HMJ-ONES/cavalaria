@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.7 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
+<!-- Cavalaria v1.8 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -28,7 +28,13 @@ p{color:var(--mut);font-size:14px;line-height:1.5}
 .mode b{font-size:16px;display:block;margin-bottom:4px}
 .mode .dice{font-size:22px}
 .mode p{font-size:13px}
-.mode .formation-diagram{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.35;color:var(--txt);background:#0c0e12;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;white-space:pre}
+.mode .formation-diagram{display:grid;gap:2px;background:#0c0e12;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;width:max-content}
+.mode .formation-diagram .mcell{width:22px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mode .formation-diagram.size12 .mcell{width:15px;height:15px}
+.mode .formation-diagram .mcell.light{background:var(--light)}
+.mode .formation-diagram .mcell.dark{background:var(--dark)}
+.mode .formation-diagram .mcell.water{background:linear-gradient(180deg,#7cc0f0,#2f6fb2);color:#fff;font-size:13px;line-height:1}
+.mode .formation-diagram .mcell img{width:92%;height:92%;object-fit:contain}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 input[type=text]{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:16px;min-width:0}
 input[type=text]:focus{outline:2px solid var(--gold);outline-offset:1px}
@@ -39,6 +45,7 @@ button.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--li
 button.danger{background:#3a1d1f;color:#ffb3b5;border:1px solid #5b2a2d}
 button.small{padding:8px 11px;font-size:13px}
 select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-size:15px}
+.langsel{padding:8px 10px;font-size:14px;font-weight:700}
 .btn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
 .btn-grid button{width:100%}
 .rules{margin-top:14px;font-size:13.5px}
@@ -95,100 +102,89 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
 <body>
 <div class="wrap">
 <header>
-  <div><div class="logo">🐎 CAVALARIA</div><div class="tag">Cavalry chess — every piece is a knight and a pawn. Free forever.</div></div>
-  <div class="badge">FREE &nbsp;•&nbsp; NO SIGN-UP &nbsp;•&nbsp; PC + MOBILE</div>
+  <div><div class="logo">🐎 CAVALARIA</div><div class="tag" data-i18n="tagline">Cavalry chess — every piece is a knight and a pawn. Free forever.</div></div>
+  <div class="badge" data-i18n="badge">FREE &nbsp;•&nbsp; NO SIGN-UP &nbsp;•&nbsp; PC + MOBILE</div>
+  <select id="langSelect" class="langsel" aria-label="Language"><option value="en">EN</option><option value="pt">PT</option><option value="es">ES</option><option value="zh">ZH</option><option value="ja">JA</option><option value="fr">FR</option><option value="ko">KO</option></select>
 </header>
 
 <!-- ============ MENU ============ -->
 <div id="menuScreen">
   <div class="card">
-    <h2>Pick a mode</h2>
-    <p>Three ways to ride. The formations decide the opening — the river decides the middle.</p>
+    <h2 data-i18n="menuTitle">Pick a mode</h2>
+    <p data-i18n="menuIntro">Three ways to ride. The formations decide the opening — the river decides the middle.</p>
     <div class="modes">
       <button class="mode" id="modeChoose" type="button">
-        <span class="dice">⚔️</span><b>1 &nbsp;Choose Formations</b>
-        <p>Pick a formation for each side and switch the river on or off. Your battle, your setup.</p>
+        <span class="dice">⚔️</span><b data-i18n="mode1Title">1 &nbsp;Choose Formations</b>
+        <p data-i18n="mode1Desc">Pick a formation for each side and switch the river on or off. Your battle, your setup.</p>
       </button>
       <button class="mode sel" id="modeMain" type="button">
-        <span class="dice">🐎</span><b>2 &nbsp;Main — Mongol vs Roman</b>
-        <p><b style="color:#fff">White rides Mongolian, Black rides Roman.</b> White always moves first. River on or off, your call.</p>
+        <span class="dice">🐎</span><b data-i18n="mode2Title">2 &nbsp;Main — Mongol vs Roman</b>
+        <p data-i18n-html="mode2Desc"><b style="color:#fff">White rides Mongolian, Black rides Roman.</b> White always moves first. River on or off, your call.</p>
       </button>
       <button class="mode" id="modeRandom" type="button">
-        <span class="dice">🎲</span><b>3 &nbsp;Random</b>
-        <p>Each side is randomly Roman or Mongolian — you won't know which you are until the board appears. The river is always on, in a random shape.</p>
+        <span class="dice">🎲</span><b data-i18n="mode3Title">3 &nbsp;Random</b>
+        <p data-i18n="mode3Desc">Each side is randomly Roman or Mongolian — you won't know which you are until the board appears. The river is always on, in a random shape.</p>
       </button>
     </div>
     <div id="chooseOpts" class="row hidden">
-      <label for="whiteFormation" style="color:var(--mut);font-size:14px">White formation</label>
+      <label for="whiteFormation" style="color:var(--mut);font-size:14px" data-i18n="lblWhiteFormation">White formation</label>
       <select id="whiteFormation"><option value="mongolian">Mongolian</option><option value="roman">Roman</option></select>
-      <label for="blackFormation" style="color:var(--mut);font-size:14px">Black formation</label>
+      <label for="blackFormation" style="color:var(--mut);font-size:14px" data-i18n="lblBlackFormation">Black formation</label>
       <select id="blackFormation"><option value="roman">Roman</option><option value="mongolian">Mongolian</option></select>
     </div>
     <div id="riverOpts" class="row">
-      <label for="riverToggle" style="color:var(--mut);font-size:14px">River</label>
-      <select id="riverToggle"><option value="on">River on</option><option value="off">River off</option></select>
+      <label for="riverToggle" style="color:var(--mut);font-size:14px" data-i18n="lblRiver">River</label>
+      <select id="riverToggle"><option value="on" data-i18n="optRiverOn">River on</option><option value="off" data-i18n="optRiverOff">River off</option></select>
       <span id="riverNote" style="color:var(--mut);font-size:13px">Fixed river across ranks 4–5, one square per file.</span>
     </div>
     <div class="row">
-      <label for="boardSize" style="color:var(--mut);font-size:14px">Board size</label>
-      <select id="boardSize"><option value="8">8 × 8 — Classic (16 pieces a side)</option><option value="12">12 × 12 — Grand (28 pieces a side)</option></select>
-      <span style="color:var(--mut);font-size:13px">Applies to all modes and all ways to play. Joining a room uses the host's board.</span>
+      <label for="boardSize" style="color:var(--mut);font-size:14px" data-i18n="lblBoardSize">Board size</label>
+      <select id="boardSize"><option value="8" data-i18n="optBoard8">8 × 8 — Classic (16 pieces a side)</option><option value="12" data-i18n="optBoard12">12 × 12 — Grand (28 pieces a side)</option></select>
+      <span style="color:var(--mut);font-size:13px" data-i18n="boardNote">Applies to all modes and all ways to play. Joining a room uses the host's board.</span>
     </div>
     <div id="randomNote" class="row hidden">
-      <span style="color:var(--mut);font-size:13px">Random mode: formations are drawn per side (Roman or Mongolian each), the river is always on with a random connected shape — one river square per file, never two in the same file. White always moves first.</span>
+      <span style="color:var(--mut);font-size:13px" data-i18n="randomNote">Random mode: formations are drawn per side (Roman or Mongolian each), the river is always on with a random connected shape — one river square per file, never two in the same file. White always moves first.</span>
     </div>
     <div class="row">
-      <label for="nameInput" style="color:var(--mut);font-size:14px">Your name</label>
-      <input type="text" id="nameInput" placeholder="e.g. Henrique" maxlength="20" style="flex:1;min-width:140px">
-      <label for="botLevel" style="color:var(--mut);font-size:14px">Bot</label>
-      <select id="botLevel"><option value="medium">Medium (greedy)</option><option value="easy">Easy (random)</option></select>
+      <label for="nameInput" style="color:var(--mut);font-size:14px" data-i18n="lblName">Your name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Alex" data-i18n-ph="phName" maxlength="20" style="flex:1;min-width:140px">
+      <label for="botLevel" style="color:var(--mut);font-size:14px" data-i18n="lblBot">Bot</label>
+      <select id="botLevel"><option value="medium" data-i18n="optBotMedium">Medium (greedy)</option><option value="easy" data-i18n="optBotEasy">Easy (random)</option></select>
     </div>
     <div class="btn-grid">
-      <button id="btnCreate" type="button">➕ Create room<br><small style="font-weight:500;font-size:12px">get a code, send it to a friend</small></button>
-      <button id="btnAnyone" type="button" class="ghost">🌍 Play anyone<br><small style="font-weight:500;font-size:12px">matched with a stranger</small></button>
-      <button id="btnBot" type="button" class="ghost">🤖 Play the bot<br><small style="font-weight:500;font-size:12px">solo, right now</small></button>
-      <button id="btnLocal" type="button" class="ghost">👥 Local 2-player<br><small style="font-weight:500;font-size:12px">same screen, pass &amp; play</small></button>
+      <button id="btnCreate" type="button" data-i18n-html="btnCreate">➕ Create room<br><small style="font-weight:500;font-size:12px">get a code, send it to a friend</small></button>
+      <button id="btnAnyone" type="button" class="ghost" data-i18n-html="btnAnyone">🌍 Play anyone<br><small style="font-weight:500;font-size:12px">matched with a stranger</small></button>
+      <button id="btnBot" type="button" class="ghost" data-i18n-html="btnBot">🤖 Play the bot<br><small style="font-weight:500;font-size:12px">solo, right now</small></button>
+      <button id="btnLocal" type="button" class="ghost" data-i18n-html="btnLocal">👥 Local 2-player<br><small style="font-weight:500;font-size:12px">same screen, pass &amp; play</small></button>
     </div>
     <div class="row">
-      <input type="text" id="joinCode" placeholder="Room code — e.g. KQ7B" maxlength="8" style="flex:1;text-transform:uppercase">
-      <button id="btnJoin" type="button" class="ghost">Join room →</button>
+      <input type="text" id="joinCode" placeholder="Room code — e.g. KQ7B" data-i18n-ph="phJoinCode" maxlength="8" style="flex:1;text-transform:uppercase">
+      <button id="btnJoin" type="button" class="ghost" data-i18n="btnJoin">Join room →</button>
     </div>
     <p id="menuMsg" style="margin-top:10px;min-height:20px"></p>
   </div>
 
   <div class="card rules" style="margin-top:14px">
-    <h2>How Cavalaria works</h2>
+    <h2 data-i18n="rulesTitle">How Cavalaria works</h2>
     <ul>
-      <li><b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).</li>
-      <li><b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.</li>
-      <li><b>The river slows you down.</b> Entering a river square is a normal move. <b>Leaving</b> one costs an extra square: a knight's jump from a river square is only <b>1 forward + 1 to the side</b> (a single diagonal step) instead of 2 + 1. It only counts once, at the start of the move — jumping <i>over</i> the river, or landing in the river again, costs nothing extra. A pawn leaving the river still steps 1 forward or captures 1 diagonally — but it can't double-step out of the river (the exit cost eats the second square).</li>
-      <li><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
-      <li><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
-      <li><b>White always moves first</b>, in every mode — even Random.</li>
-      <li><b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.</li>
-      <li><b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.</li>
-      <li><b>Board size.</b> The 12×12 board ("Grand") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.</li>
-      <li><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
+      <li data-i18n-html="rule1"><b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).</li>
+      <li data-i18n-html="rule2"><b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.</li>
+      <li data-i18n-html="rule3"><b>The river slows you down.</b> Entering a river square is a normal move. <b>Leaving</b> one costs an extra square: a knight's jump from a river square is only <b>1 forward + 1 to the side</b> (a single diagonal step) instead of 2 + 1. It only counts once, at the start of the move — jumping <i>over</i> the river, or landing in the river again, costs nothing extra. A pawn leaving the river still steps 1 forward or captures 1 diagonally — but it can't double-step out of the river (the exit cost eats the second square).</li>
+      <li data-i18n-html="rule4"><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
+      <li data-i18n-html="rule5"><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
+      <li data-i18n-html="rule6"><b>White always moves first</b>, in every mode — even Random.</li>
+      <li data-i18n-html="rule7"><b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.</li>
+      <li data-i18n-html="rule8"><b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.</li>
+      <li data-i18n-html="rule9"><b>Board size.</b> The 12×12 board ("Grand") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.</li>
+      <li data-i18n-html="rule10"><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
     </ul>
     <div class="row" style="gap:14px">
-      <div><b style="color:var(--txt)">Roman</b><div class="formation-diagram">. . . X X . . .
-X . X X X X . X
-X X X X X X X X</div></div>
-      <div><b style="color:var(--txt)">Mongolian</b><div class="formation-diagram">X X . . . . X X
-X X X . . X X X
-. X X X X X X .</div></div>
-      <div><b style="color:var(--txt)">River (fixed)</b><div class="formation-diagram">_ _ . . . . _ _
-. . _ _ _ _ . .</div><p style="margin-top:6px">Ranks 5 and 4, one square per file.</p></div>
-      <div><b style="color:var(--txt)">Roman 12×12</b><div class="formation-diagram">. . . . X X X X . . . .
-. . . X X X X X X . . .
-X . X X X X X X X X . X
-. X . X X X X X X . X .</div></div>
-      <div><b style="color:var(--txt)">Mongolian 12×12</b><div class="formation-diagram">X X . . . . . . . . X X
-X X X X . . . . X X X X
-. X X X X . . X X X X .
-. . X X X X X X X X . .</div></div>
-      <div><b style="color:var(--txt)">River 12×12 (fixed)</b><div class="formation-diagram">~ ~ ~ . . . . . . ~ ~ ~
-. . . ~ ~ ~ ~ ~ ~ . . .</div><p style="margin-top:6px">Ranks 7 and 6, one square per file.</p></div>
+      <div><b style="color:var(--txt)">Roman</b><div class="formation-diagram" id="miniRoman8"></div></div>
+      <div><b style="color:var(--txt)">Mongolian</b><div class="formation-diagram" id="miniMongolian8"></div></div>
+      <div><b style="color:var(--txt)" data-i18n="lblRiverFixed">River (fixed)</b><div class="formation-diagram" id="miniRiver8"></div><p style="margin-top:6px" data-i18n="capRiverFixed">Ranks 5 and 4, one square per file.</p></div>
+      <div><b style="color:var(--txt)">Roman 12×12</b><div class="formation-diagram" id="miniRoman12"></div></div>
+      <div><b style="color:var(--txt)">Mongolian 12×12</b><div class="formation-diagram" id="miniMongolian12"></div></div>
+      <div><b style="color:var(--txt)" data-i18n="lblRiver12">River 12×12 (fixed)</b><div class="formation-diagram" id="miniRiver12"></div><p style="margin-top:6px" data-i18n="capRiver12">Ranks 7 and 6, one square per file.</p></div>
     </div>
   </div>
 </div>
@@ -199,50 +195,50 @@ X X X X . . . . X X X X
     <div>
       <div class="board-wrap"><div class="board" id="board"></div></div>
       <div class="row" style="justify-content:space-between">
-        <button class="ghost small" id="btnFlip" type="button">⇅ Flip board</button>
-        <button class="ghost small" id="btnSound" type="button">🔊 Sound on</button>
-        <button class="ghost small" id="btnMenu" type="button">← Menu</button>
+        <button class="ghost small" id="btnFlip" type="button" data-i18n="btnFlip">⇅ Flip board</button>
+        <button class="ghost small" id="btnSound" type="button" data-i18n="btnSoundOn">🔊 Sound on</button>
+        <button class="ghost small" id="btnMenu" type="button" data-i18n="btnMenu">← Menu</button>
       </div>
     </div>
     <div class="panel">
       <div class="status" id="statusBox">White to move<small id="statusSub"></small></div>
       <div class="pills" id="pillsBox"></div>
       <div class="card" style="padding:14px">
-        <h3>Room</h3>
+        <h3 data-i18n="hRoom">Room</h3>
         <div class="conn" id="connBox">Local game</div>
         <div id="roomBox" class="hidden" style="margin-top:8px"><span class="roomcode" id="roomCodeText"></span><br>
-        <button class="ghost small" id="btnCopy" type="button" style="margin-top:8px">Copy code / link</button></div>
-        <h3>Captured</h3>
+        <button class="ghost small" id="btnCopy" type="button" style="margin-top:8px" data-i18n="btnCopy">Copy code / link</button></div>
+        <h3 data-i18n="hCaptured">Captured</h3>
         <div class="captured" id="capWhite">♘ White took: —</div>
         <div class="captured" id="capBlack">♞ Black took: —</div>
-        <h3>Moves</h3>
+        <h3 data-i18n="hMoves">Moves</h3>
         <div class="moves" id="movesBox">No moves yet — the formations are set, now you ride.</div>
         <div class="row" style="margin-top:14px">
-          <button id="btnRematch" type="button" class="small">🐎 Rematch (new setup)</button>
-          <button id="btnResign" type="button" class="danger small">🏳 Resign</button>
+          <button id="btnRematch" type="button" class="small" data-i18n="btnRematch">🐎 Rematch (new setup)</button>
+          <button id="btnResign" type="button" class="danger small" data-i18n="btnResign">🏳 Resign</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<footer> Cavalaria v1.7 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer data-i18n-html="footer"> Cavalaria v1.8 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
 <div id="empowerModal" class="modal hidden"><div class="box">
-  <h2>Last unit standing!</h2><p id="empowerText">Your last Cavalaria earns an extra power. Choose one — it keeps its knight and pawn moves too.</p>
+  <h2 data-i18n="empowerTitle">Last unit standing!</h2><p id="empowerText">Your last Cavalaria earns an extra power. Choose one — it keeps its knight and pawn moves too.</p>
   <div class="empower-pieces" id="empowerPieces">
-    <button id="empowerRook" type="button"><b>♜</b>Rook — Torre<br><small style="font-weight:500">slides along ranks &amp; files</small></button>
-    <button id="empowerBishop" type="button"><b>♝</b>Bishop — Bispo<br><small style="font-weight:500">slides along diagonals</small></button>
+    <button id="empowerRook" type="button" data-i18n-html="empowerRook"><b>♜</b>Rook<br><small style="font-weight:500">slides along ranks &amp; files</small></button>
+    <button id="empowerBishop" type="button" data-i18n-html="empowerBishop"><b>♝</b>Bishop<br><small style="font-weight:500">slides along diagonals</small></button>
   </div>
 </div></div>
 
 <div id="overModal" class="modal hidden"><div class="box">
   <h2 id="overTitle">White wins</h2><p id="overReason"></p>
   <div class="row" style="justify-content:center;margin-top:16px">
-    <button id="btnOverRematch" type="button">🐎 Rematch</button>
-    <button id="btnOverMenu" type="button" class="ghost">Menu</button>
+    <button id="btnOverRematch" type="button" data-i18n="overRematch">🐎 Rematch</button>
+    <button id="btnOverMenu" type="button" class="ghost" data-i18n="overMenu">Menu</button>
   </div>
 </div></div>
 
@@ -504,6 +500,1032 @@ if(typeof module!=='undefined'&&module.exports){ module.exports={FORMATIONS,FIXE
 <script>
 "use strict";
 /* ================= UI + multiplayer ================= */
+/* ================= i18n — 7 languages =================
+   English is the default and the fallback for any missing key.
+   Choice persists in localStorage under 'lang'. Static text uses
+   data-i18n (textContent), data-i18n-html (innerHTML) and
+   data-i18n-ph (placeholder); dynamic strings go through t().
+   Player names, room codes and game terms (Cavalaria, Roman,
+   Mongolian) are never translated. */
+const I18N={
+en:{
+pageTitle:"Cavalaria — Cavalry Chess. Free.",
+tagline:"Cavalry chess — every piece is a knight and a pawn. Free forever.",
+badge:"FREE • NO SIGN-UP • PC + MOBILE",
+menuTitle:"Pick a mode",
+menuIntro:"Three ways to ride. The formations decide the opening — the river decides the middle.",
+mode1Title:"1 &nbsp;Choose Formations",
+mode1Desc:"Pick a formation for each side and switch the river on or off. Your battle, your setup.",
+mode2Title:"2 &nbsp;Main — Mongol vs Roman",
+mode2Desc:"<b style=\"color:#fff\">White rides Mongolian, Black rides Roman.</b> White always moves first. River on or off, your call.",
+mode3Title:"3 &nbsp;Random",
+mode3Desc:"Each side is randomly Roman or Mongolian — you won't know which you are until the board appears. The river is always on, in a random shape.",
+lblWhiteFormation:"White formation",
+lblBlackFormation:"Black formation",
+lblRiver:"River",
+optRiverOn:"River on",
+optRiverOff:"River off",
+riverNoteFixed:"Fixed river across ranks {ranks}, one square per file.",
+riverNoteRandom:"Random river: one square per file, ranks {ranks}, always connected.",
+lblBoardSize:"Board size",
+optBoard8:"8 × 8 — Classic (16 pieces a side)",
+optBoard12:"12 × 12 — Grand (28 pieces a side)",
+boardNote:"Applies to all modes and all ways to play. Joining a room uses the host's board.",
+randomNote:"Random mode: formations are drawn per side (Roman or Mongolian each), the river is always on with a random connected shape — one river square per file, never two in the same file. White always moves first.",
+lblName:"Your name",
+phName:"e.g. Alex",
+lblBot:"Bot",
+optBotMedium:"Medium (greedy)",
+optBotEasy:"Easy (random)",
+btnCreate:"➕ Create room<br><small style=\"font-weight:500;font-size:12px\">get a code, send it to a friend</small>",
+btnAnyone:"🌍 Play anyone<br><small style=\"font-weight:500;font-size:12px\">matched with a stranger</small>",
+btnBot:"🤖 Play the bot<br><small style=\"font-weight:500;font-size:12px\">solo, right now</small>",
+btnLocal:"👥 Local 2-player<br><small style=\"font-weight:500;font-size:12px\">same screen, pass &amp; play</small>",
+phJoinCode:"Room code — e.g. KQ7B",
+btnJoin:"Join room →",
+rulesTitle:"How Cavalaria works",
+rule1:"<b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).",
+rule2:"<b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.",
+rule3:"<b>The river slows you down.</b> Entering a river square is a normal move. <b>Leaving</b> one costs an extra square: a knight's jump from a river square is only <b>1 forward + 1 to the side</b> (a single diagonal step) instead of 2 + 1. It only counts once, at the start of the move — jumping <i>over</i> the river, or landing in the river again, costs nothing extra. A pawn leaving the river still steps 1 forward or captures 1 diagonally — but it can't double-step out of the river (the exit cost eats the second square).",
+rule4:"<b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.",
+rule5:"<b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.",
+rule6:"<b>White always moves first</b>, in every mode — even Random.",
+rule7:"<b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.",
+rule8:"<b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.",
+rule9:"<b>Board size.</b> The 12×12 board (\"Grand\") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.",
+rule10:"<b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.",
+lblRiverFixed:"River (fixed)",
+lblRiver12:"River 12×12 (fixed)",
+capRiverFixed:"Ranks 5 and 4, one square per file.",
+capRiver12:"Ranks 7 and 6, one square per file.",
+btnFlip:"⇅ Flip board",
+btnSoundOn:"🔊 Sound on",
+btnSoundOff:"🔇 Sound off",
+btnMenu:"← Menu",
+hRoom:"Room",
+hCaptured:"Captured",
+hMoves:"Moves",
+btnCopy:"Copy code / link",
+copied:"Copied!",
+btnRematch:"🐎 Rematch (new setup)",
+btnResign:"🏳 Resign",
+empowerTitle:"Last unit standing!",
+empowerText:"{color} — your last Cavalaria earns an extra power. Choose one — it keeps its knight and pawn moves too.",
+empowerRook:"<b>♜</b>Rook<br><small style=\"font-weight:500\">slides along ranks &amp; files</small>",
+empowerBishop:"<b>♝</b>Bishop<br><small style=\"font-weight:500\">slides along diagonals</small>",
+overRematch:"🐎 Rematch",
+overMenu:"Menu",
+footer:"Cavalaria v1.8 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
+statusToMove:"{color} to move",
+statusYourMove:"Your move.",
+statusWaitingOpp:"Waiting for opponent…",
+statusBotThinking:"Bot is thinking…",
+statusLastUnit:"{color} — last unit standing!",
+subChoosePower:"Choose its extra power: Rook or Bishop.",
+subBotChoosing:"The bot is choosing its extra power…",
+subWaitingChoose:"Waiting for {color} to choose its extra power…",
+winWhite:"♘ White wins!",
+winBlack:"♞ Black wins!",
+draw:"🤝 Draw",
+reasonNoPiecesBoth:"No pieces left on either side. Draw!",
+reasonWhiteOut:"White has no pieces left. Black wins!",
+reasonBlackOut:"Black has no pieces left. White wins!",
+reasonNoMoves:"Neither side has a move — draw.",
+reasonResigned:"{color} resigned.",
+passNote:"{color} has no moves — turn passes to {other}.",
+pillWhite:"♘ White: {n} • {formation}",
+pillBlack:"♞ Black: {n} • {formation}",
+pillRiverOn:"River on",
+pillRiverOff:"River off",
+modeChoose:"Choose Formations",
+modeMain:"Mongol vs Roman",
+modeRandom:"Random",
+seed:"Seed {seed}",
+capWhiteTook:"♘ White took: {x}",
+capBlackTook:"♞ Black took: {x}",
+movesEmpty:"No moves yet — the formations are set, now you ride.",
+moveEmpower:"★ {color} last unit gains {piece} {glyph}",
+pieceRook:"Rook",
+pieceBishop:"Bishop",
+colorWhite:"White",
+colorBlack:"Black",
+botMedium:"Medium",
+botEasy:"Easy",
+connLocal:"Local game",
+connOnline:"Online game",
+connLocal2p:"Local 2-player — same screen, pass & play.",
+connBot:"You (White) vs Bot ({level}). Bot plays Black.",
+connBotRematch:"You (White) vs Bot.",
+connLocalRematch:"Local 2-player — new setup!",
+connRoomWaiting:"Room <b>{code}</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.",
+connLobbyWaiting:"In the lobby (slot {slot}) — waiting for an opponent to join…",
+connOnlineBlack:"Online game — you are <b>Black</b>.",
+connRematchSwap:"Online game — rematch! Colours swapped.",
+connConnectedHost:"<b>Connected!</b> Your friend joined. You are White.",
+connConnectedGuest:"<b>Connected!</b> You joined. You are Black.",
+connDisconnected:"<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.",
+menuPeerJSMissing:"Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.",
+menuPeerJSMissingShort:"Could not load the multiplayer library (PeerJS). Check your connection and try again.",
+menuCreatingRoom:"Creating room {code}…",
+menuRoomLive:"Room {code} is live — send the code to your friend.",
+menuJoining:"Joining room {code}…",
+menuTypeCode:"Type a room code first.",
+menuJoined:"Joined room {code}! Waiting for the board…",
+menuStillTrying:"Still trying to reach room {code} — is the code right, and is your friend's room still open?",
+menuCouldNotCreate:"Could not create the room ({err}). Try again.",
+menuCouldNotJoin:"Could not join room {code} ({err}). Double-check the code.",
+menuLooking:"Looking for an opponent…",
+menuWaitingOpp:"Waiting for an opponent… (lobby slot {slot})",
+menuOppFound:"Opponent found — good luck!",
+menuSlotsBusy:"All lobby slots are busy right now — try again in a few seconds, or create a room instead.",
+menuRematchWaiting:"Rematch requested — waiting for host…",
+menuDeepLink:"Room {code} detected — press Join room to enter.",
+copyPrompt:"Copy your room link:",
+copyShareText:"Cavalaria room {code} — join me: {link}"
+},
+pt:{
+pageTitle:"Cavalaria — Xadrez de Cavalaria. Grátis.",
+tagline:"Xadrez de cavalaria — cada peça é um cavalo e um peão. Grátis para sempre.",
+badge:"GRÁTIS • SEM CADASTRO • PC + CELULAR",
+menuTitle:"Escolha um modo",
+menuIntro:"Três formas de cavalgar. As formações decidem a abertura — o rio decide o meio-jogo.",
+mode1Title:"1 &nbsp;Escolher Formações",
+mode1Desc:"Escolha uma formação para cada lado e ligue ou desligue o rio. A batalha é sua, a formação também.",
+mode2Title:"2 &nbsp;Principal — Mongol vs Romano",
+mode2Desc:"<b style=\"color:#fff\">As Brancas cavalgam em formação Mongol, as Pretas em formação Romana.</b> As Brancas jogam sempre primeiro. Rio ligado ou desligado, você decide.",
+mode3Title:"3 &nbsp;Aleatório",
+mode3Desc:"Cada lado é aleatoriamente Romano ou Mongol — você só vai saber qual é o seu quando o tabuleiro aparecer. O rio está sempre ligado, num formato aleatório.",
+lblWhiteFormation:"Formação das Brancas",
+lblBlackFormation:"Formação das Pretas",
+lblRiver:"Rio",
+optRiverOn:"Rio ligado",
+optRiverOff:"Rio desligado",
+riverNoteFixed:"Rio fixo nas fileiras {ranks}, uma casa por coluna.",
+riverNoteRandom:"Rio aleatório: uma casa por coluna, nas fileiras {ranks}, sempre conectado.",
+lblBoardSize:"Tamanho do tabuleiro",
+optBoard8:"8 × 8 — Clássico (16 peças por lado)",
+optBoard12:"12 × 12 — Grande (28 peças por lado)",
+boardNote:"Vale para todos os modos e todas as formas de jogar. Entrar numa sala usa o tabuleiro do anfitrião.",
+randomNote:"Modo aleatório: as formações são sorteadas por lado (Romana ou Mongol cada), o rio está sempre ligado com um formato aleatório e conectado — uma casa por coluna, nunca duas na mesma coluna. As Brancas jogam sempre primeiro.",
+lblName:"Seu nome",
+phName:"ex.: Alex",
+lblBot:"Robô",
+optBotMedium:"Médio (ganancioso)",
+optBotEasy:"Fácil (aleatório)",
+btnCreate:"➕ Criar sala<br><small style=\"font-weight:500;font-size:12px\">receba um código e envie a um amigo</small>",
+btnAnyone:"🌍 Jogar com alguém<br><small style=\"font-weight:500;font-size:12px\">contra um desconhecido</small>",
+btnBot:"🤖 Jogar contra o robô<br><small style=\"font-weight:500;font-size:12px\">sozinho, agora mesmo</small>",
+btnLocal:"👥 2 jogadores no local<br><small style=\"font-weight:500;font-size:12px\">mesma tela, revezando</small>",
+phJoinCode:"Código da sala — ex.: KQ7B",
+btnJoin:"Entrar na sala →",
+rulesTitle:"Como funciona a Cavalaria",
+rule1:"<b>Cada peça é uma Cavalaria</b> — uma fusão de cavalo e peão. Cada uma se move das <b>duas</b> formas: como peão (1 casa para frente, 2 para frente no primeiro lance, captura 1 casa na diagonal para frente) <b>e</b> como cavalo (2 casas numa direção e 1 para o lado, pulando por cima das peças).",
+rule2:"<b>Vença eliminando o inimigo.</b> Não há reis nem xeque-mate — capture <b>todas</b> as peças do outro lado para vencer. Não há promoção nem en passant.",
+rule3:"<b>O rio atrasa você.</b> Entrar numa casa de rio é um lance normal. <b>Sair</b> de uma custa uma casa a mais: o salto do cavalo a partir de uma casa de rio é de apenas <b>1 para frente + 1 para o lado</b> (um único passo diagonal) em vez de 2 + 1. Só conta uma vez, no início do lance — pular <i>por cima</i> do rio, ou pousar no rio de novo, não custa nada extra. Um peão saindo do rio ainda anda 1 para frente ou captura 1 na diagonal — mas não pode dar o passo duplo para sair do rio (o custo de saída come a segunda casa).",
+rule4:"<b>A última unidade fica mais forte.</b> Quando um lado fica com apenas a sua última peça, o jogador escolhe um poder extra para ela: <b>♜ Torre</b> (desliza pelas fileiras e colunas) ou <b>♝ Bispo</b> (desliza pelas diagonais). Ela mantém os movimentos de cavalo e de peão.",
+rule5:"<b>As formações são cavalaria de verdade.</b> 16 peças por lado, em três fileiras. <b>Romana</b> — um bloco sólido, 8 + 6 + 2. <b>Mongol</b> — chifres bem abertos, 6 + 6 + 4.",
+rule6:"<b>As Brancas jogam sempre primeiro</b>, em todos os modos — até no Aleatório.",
+rule7:"<b>Sem lances? Passe a vez.</b> Se um lado não tem lance legal, a vez passa simplesmente para o outro lado. Se nenhum lado puder se mover, é empate.",
+rule8:"<b>Rio aleatório, honestamente aleatório.</b> Uma casa de rio por coluna, na fileira 4 ou 5 — assim o rio é sempre uma faixa contínua atravessando o tabuleiro, nunca duas casas empilhadas na mesma coluna (isso prenderia um peão tentando sair do rio). As colunas podem compartilhar a fileira.",
+rule9:"<b>Tamanho do tabuleiro.</b> O tabuleiro 12×12 (“Grande”) segue as mesmas regras com <b>28 peças por lado em quatro fileiras</b> e o rio nas fileiras 6–7, uma casa por coluna. Escolha o tamanho acima — ele vale para todos os modos.",
+rule10:"<b>Os lances sempre chegam.</b> Cada lance envia o tabuleiro inteiro, o outro lado confirma, e os dois lados comparam as notas a cada poucos segundos — se um lance se perder, os tabuleiros se consertam sozinhos.",
+lblRiverFixed:"Rio (fixo)",
+lblRiver12:"Rio 12×12 (fixo)",
+capRiverFixed:"Fileiras 5 e 4, uma casa por coluna.",
+capRiver12:"Fileiras 7 e 6, uma casa por coluna.",
+btnFlip:"⇅ Virar o tabuleiro",
+btnSoundOn:"🔊 Som ligado",
+btnSoundOff:"🔇 Som desligado",
+btnMenu:"← Menu",
+hRoom:"Sala",
+hCaptured:"Capturadas",
+hMoves:"Lances",
+btnCopy:"Copiar código / link",
+copied:"Copiado!",
+btnRematch:"🐎 Revanche (nova formação)",
+btnResign:"🏳 Desistir",
+empowerTitle:"Última unidade em pé!",
+empowerText:"{color} — sua última Cavalaria ganha um poder extra. Escolha um — ela mantém os movimentos de cavalo e de peão.",
+empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">desliza pelas fileiras e colunas</small>",
+empowerBishop:"<b>♝</b>Bispo<br><small style=\"font-weight:500\">desliza pelas diagonais</small>",
+overRematch:"🐎 Revanche",
+overMenu:"Menu",
+footer:"Cavalaria v1.8 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
+statusToMove:"Vez das {color}",
+statusYourMove:"Sua vez.",
+statusWaitingOpp:"Aguardando o oponente…",
+statusBotThinking:"O robô está pensando…",
+statusLastUnit:"{color} — última unidade em pé!",
+subChoosePower:"Escolha o poder extra: Torre ou Bispo.",
+subBotChoosing:"O robô está escolhendo o poder extra…",
+subWaitingChoose:"À espera que as {color} escolham o poder extra…",
+winWhite:"♘ Brancas vencem!",
+winBlack:"♞ Pretas vencem!",
+draw:"🤝 Empate",
+reasonNoPiecesBoth:"Não sobrou nenhuma peça de nenhum dos lados. Empate!",
+reasonWhiteOut:"As Brancas ficaram sem peças. Pretas vencem!",
+reasonBlackOut:"As Pretas ficaram sem peças. Brancas vencem!",
+reasonNoMoves:"Nenhum dos lados tem lance — empate.",
+reasonResigned:"{color} desistiram.",
+passNote:"{color} não têm lances — a vez passa para as {other}.",
+pillWhite:"♘ Brancas: {n} • {formation}",
+pillBlack:"♞ Pretas: {n} • {formation}",
+pillRiverOn:"Rio ligado",
+pillRiverOff:"Rio desligado",
+modeChoose:"Escolher Formações",
+modeMain:"Mongol vs Romano",
+modeRandom:"Aleatório",
+seed:"Seed {seed}",
+capWhiteTook:"♘ Brancas capturaram: {x}",
+capBlackTook:"♞ Pretas capturaram: {x}",
+movesEmpty:"Nenhum lance ainda — as formações estão prontas, agora é cavalgar.",
+moveEmpower:"★ A última unidade das {color} ganha {piece} {glyph}",
+pieceRook:"Torre",
+pieceBishop:"Bispo",
+colorWhite:"Brancas",
+colorBlack:"Pretas",
+botMedium:"Médio",
+botEasy:"Fácil",
+connLocal:"Jogo local",
+connOnline:"Jogo online",
+connLocal2p:"2 jogadores no local — mesma tela, revezando.",
+connBot:"Você (Brancas) vs Robô ({level}). O robô joga de Pretas.",
+connBotRematch:"Você (Brancas) vs Robô.",
+connLocalRematch:"2 jogadores no local — nova formação!",
+connRoomWaiting:"Sala <b>{code}</b> — esperando seu amigo entrar…<br>Envie o código a ele, ou use o botão de copiar abaixo.",
+connLobbyWaiting:"No saguão (vaga {slot}) — esperando um oponente entrar…",
+connOnlineBlack:"Jogo online — você é <b>Pretas</b>.",
+connRematchSwap:"Jogo online — revanche! Cores trocadas.",
+connConnectedHost:"<b>Conectado!</b> Seu amigo entrou. Você é Brancas.",
+connConnectedGuest:"<b>Conectado!</b> Você entrou. Você é Pretas.",
+connDisconnected:"<b>O oponente desconectou.</b> Você pode continuar olhando o tabuleiro ou voltar ao menu para um novo jogo.",
+menuPeerJSMissing:"Não foi possível carregar a biblioteca multiplayer (PeerJS). Verifique sua conexão e tente de novo — o robô e o jogo local continuam funcionando.",
+menuPeerJSMissingShort:"Não foi possível carregar a biblioteca multiplayer (PeerJS). Verifique sua conexão e tente de novo.",
+menuCreatingRoom:"Criando a sala {code}…",
+menuRoomLive:"A sala {code} está ativa — envie o código ao seu amigo.",
+menuJoining:"Entrando na sala {code}…",
+menuTypeCode:"Digite um código de sala primeiro.",
+menuJoined:"Você entrou na sala {code}! Aguardando o tabuleiro…",
+menuStillTrying:"Ainda tentando alcançar a sala {code} — o código está certo e a sala do seu amigo ainda está aberta?",
+menuCouldNotCreate:"Não foi possível criar a sala ({err}). Tente de novo.",
+menuCouldNotJoin:"Não foi possível entrar na sala {code} ({err}). Confira o código.",
+menuLooking:"Procurando um oponente…",
+menuWaitingOpp:"Aguardando um oponente… (vaga {slot} do saguão)",
+menuOppFound:"Oponente encontrado — boa sorte!",
+menuSlotsBusy:"Todas as vagas do saguão estão ocupadas agora — tente de novo em alguns segundos, ou crie uma sala.",
+menuRematchWaiting:"Revanche pedida — aguardando o anfitrião…",
+menuDeepLink:"Sala {code} detectada — pressione Entrar na sala para entrar.",
+copyPrompt:"Copie o link da sua sala:",
+copyShareText:"Sala de Cavalaria {code} — entre comigo: {link}"
+},
+es:{
+pageTitle:"Cavalaria — Ajedrez de caballería. Gratis.",
+tagline:"Ajedrez de caballería — cada pieza es un caballo y un peón. Gratis para siempre.",
+badge:"GRATIS • SIN REGISTRO • PC + MÓVIL",
+menuTitle:"Elige un modo",
+menuIntro:"Tres formas de cabalgar. Las formaciones deciden la apertura — el río decide el medio juego.",
+mode1Title:"1 &nbsp;Elegir formaciones",
+mode1Desc:"Elige una formación para cada bando y enciende o apaga el río. Tu batalla, tu formación.",
+mode2Title:"2 &nbsp;Principal — Mongol vs Romano",
+mode2Desc:"<b style=\"color:#fff\">Las blancas cabalgan en formación mongola, las negras en romana.</b> Las blancas mueven siempre primero. Río encendido o apagado, tú decides.",
+mode3Title:"3 &nbsp;Aleatorio",
+mode3Desc:"Cada bando es aleatoriamente romano o mongol — no sabrás cuál eres hasta que aparezca el tablero. El río siempre está encendido, con una forma aleatoria.",
+lblWhiteFormation:"Formación de las blancas",
+lblBlackFormation:"Formación de las negras",
+lblRiver:"Río",
+optRiverOn:"Río encendido",
+optRiverOff:"Río apagado",
+riverNoteFixed:"Río fijo en las filas {ranks}, una casilla por columna.",
+riverNoteRandom:"Río aleatorio: una casilla por columna, en las filas {ranks}, siempre conectado.",
+lblBoardSize:"Tamaño del tablero",
+optBoard8:"8 × 8 — Clásico (16 piezas por bando)",
+optBoard12:"12 × 12 — Grande (28 piezas por bando)",
+boardNote:"Se aplica a todos los modos y a todas las formas de jugar. Al entrar en una sala se usa el tablero del anfitrión.",
+randomNote:"Modo aleatorio: las formaciones se sortean por bando (romana o mongola cada una), el río siempre está encendido con una forma aleatoria y conectada — una casilla por columna, nunca dos en la misma columna. Las blancas mueven siempre primero.",
+lblName:"Tu nombre",
+phName:"p. ej., Alex",
+lblBot:"Robot",
+optBotMedium:"Medio (codicioso)",
+optBotEasy:"Fácil (aleatorio)",
+btnCreate:"➕ Crear sala<br><small style=\"font-weight:500;font-size:12px\">recibe un código y envíaselo a un amigo</small>",
+btnAnyone:"🌍 Jugar con cualquiera<br><small style=\"font-weight:500;font-size:12px\">contra un desconocido</small>",
+btnBot:"🤖 Jugar contra el robot<br><small style=\"font-weight:500;font-size:12px\">en solitario, ahora mismo</small>",
+btnLocal:"👥 2 jugadores en local<br><small style=\"font-weight:500;font-size:12px\">misma pantalla, por turnos</small>",
+phJoinCode:"Código de sala — p. ej., KQ7B",
+btnJoin:"Entrar en la sala →",
+rulesTitle:"Cómo funciona Cavalaria",
+rule1:"<b>Cada pieza es una Cavalaria</b> — una fusión de caballo y peón. Cada una se mueve de <b>ambas</b> formas: como peón (1 casilla hacia adelante, 2 hacia adelante en su primer movimiento, captura 1 casilla en diagonal hacia adelante) <b>y</b> como caballo (2 casillas en una dirección y 1 hacia el lado, saltando por encima de las piezas).",
+rule2:"<b>Gana eliminando al enemigo.</b> No hay reyes ni jaque mate — captura <b>todas</b> las piezas del otro bando para ganar. No hay promoción ni captura al paso.",
+rule3:"<b>El río te frena.</b> Entrar en una casilla de río es un movimiento normal. <b>Salir</b> de una cuesta una casilla más: el salto de caballo desde una casilla de río es solo de <b>1 hacia adelante + 1 hacia el lado</b> (un único paso diagonal) en lugar de 2 + 1. Solo cuenta una vez, al inicio del movimiento — saltar <i>por encima</i> del río, o volver a caer en el río, no cuesta nada extra. Un peón que sale del río sigue avanzando 1 hacia adelante o capturando 1 en diagonal — pero no puede hacer el paso doble para salir del río (el coste de salida se come la segunda casilla).",
+rule4:"<b>La última unidad se hace más fuerte.</b> Cuando un bando se queda con su última pieza, su jugador elige un poder extra para ella: <b>♜ Torre</b> (se desliza por filas y columnas) o <b>♝ Alfil</b> (se desliza por diagonales). Conserva también sus movimientos de caballo y de peón.",
+rule5:"<b>Las formaciones son caballería de verdad.</b> 16 piezas por bando, en tres filas. <b>Romana</b> — un bloque sólido, 8 + 6 + 2. <b>Mongola</b> — cuernos bien abiertos, 6 + 6 + 4.",
+rule6:"<b>Las blancas mueven siempre primero</b>, en todos los modos — incluso en Aleatorio.",
+rule7:"<b>¿Sin movimientos? Pasa el turno.</b> Si un bando no tiene ningún movimiento legal, el turno pasa simplemente al otro bando. Si ningún bando puede mover, es empate.",
+rule8:"<b>Río aleatorio, honestamente aleatorio.</b> Una casilla de río por columna, en la fila 4 o 5 — así el río es siempre una banda continua a través del tablero, nunca dos casillas apiladas en la misma columna (eso atraparía a un peón que intenta salir del río). Las columnas pueden compartir fila.",
+rule9:"<b>Tamaño del tablero.</b> El tablero de 12×12 («Grande») sigue las mismas reglas con <b>28 piezas por bando en cuatro filas</b> y el río en las filas 6–7, una casilla por columna. Elige el tamaño arriba — se aplica a todos los modos.",
+rule10:"<b>Los movimientos siempre llegan.</b> Cada movimiento envía el tablero completo, el otro lado lo confirma y ambos lados comparan sus notas cada pocos segundos — si alguna vez se pierde un movimiento, los tableros se reparan solos.",
+lblRiverFixed:"Río (fijo)",
+lblRiver12:"Río 12×12 (fijo)",
+capRiverFixed:"Filas 5 y 4, una casilla por columna.",
+capRiver12:"Filas 7 y 6, una casilla por columna.",
+btnFlip:"⇅ Girar el tablero",
+btnSoundOn:"🔊 Sonido activado",
+btnSoundOff:"🔇 Sonido desactivado",
+btnMenu:"← Menú",
+hRoom:"Sala",
+hCaptured:"Capturadas",
+hMoves:"Movimientos",
+btnCopy:"Copiar código / enlace",
+copied:"¡Copiado!",
+btnRematch:"🐎 Revancha (nueva formación)",
+btnResign:"🏳 Rendirse",
+empowerTitle:"¡Última unidad en pie!",
+empowerText:"{color} — tu última Cavalaria gana un poder extra. Elige uno — conserva también sus movimientos de caballo y de peón.",
+empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">se desliza por filas y columnas</small>",
+empowerBishop:"<b>♝</b>Alfil<br><small style=\"font-weight:500\">se desliza por diagonales</small>",
+overRematch:"🐎 Revancha",
+overMenu:"Menú",
+footer:"Cavalaria v1.8 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
+statusToMove:"Turno de las {color}",
+statusYourMove:"Tu turno.",
+statusWaitingOpp:"Esperando al oponente…",
+statusBotThinking:"El robot está pensando…",
+statusLastUnit:"¡{color} — última unidad en pie!",
+subChoosePower:"Elige su poder extra: Torre o Alfil.",
+subBotChoosing:"El robot está eligiendo su poder extra…",
+subWaitingChoose:"Esperando a que las {color} elijan su poder extra…",
+winWhite:"♘ ¡Ganan las blancas!",
+winBlack:"♞ ¡Ganan las negras!",
+draw:"🤝 Empate",
+reasonNoPiecesBoth:"No quedan piezas en ningún bando. ¡Empate!",
+reasonWhiteOut:"Las blancas se quedaron sin piezas. ¡Ganan las negras!",
+reasonBlackOut:"Las negras se quedaron sin piezas. ¡Ganan las blancas!",
+reasonNoMoves:"Ningún bando tiene movimientos — empate.",
+reasonResigned:"Las {color} se rindieron.",
+passNote:"Las {color} no tienen movimientos — el turno pasa a las {other}.",
+pillWhite:"♘ Blancas: {n} • {formation}",
+pillBlack:"♞ Negras: {n} • {formation}",
+pillRiverOn:"Río encendido",
+pillRiverOff:"Río apagado",
+modeChoose:"Elegir formaciones",
+modeMain:"Mongol vs Romano",
+modeRandom:"Aleatorio",
+seed:"Semilla {seed}",
+capWhiteTook:"♘ Las blancas tomaron: {x}",
+capBlackTook:"♞ Las negras tomaron: {x}",
+movesEmpty:"Aún no hay movimientos — las formaciones están listas, ¡a cabalgar!",
+moveEmpower:"★ La última unidad de las {color} gana {piece} {glyph}",
+pieceRook:"Torre",
+pieceBishop:"Alfil",
+colorWhite:"Blancas",
+colorBlack:"Negras",
+botMedium:"Medio",
+botEasy:"Fácil",
+connLocal:"Partida local",
+connOnline:"Partida en línea",
+connLocal2p:"2 jugadores en local — misma pantalla, por turnos.",
+connBot:"Tú (blancas) vs Robot ({level}). El robot juega con negras.",
+connBotRematch:"Tú (blancas) vs Robot.",
+connLocalRematch:"2 jugadores en local — ¡nueva formación!",
+connRoomWaiting:"Sala <b>{code}</b> — esperando a que tu amigo se una…<br>Envíale el código, o usa el botón de copiar.",
+connLobbyWaiting:"En el vestíbulo (puesto {slot}) — esperando a que se una un oponente…",
+connOnlineBlack:"Partida en línea — eres <b>negras</b>.",
+connRematchSwap:"Partida en línea — ¡revancha! Colores intercambiados.",
+connConnectedHost:"<b>¡Conectado!</b> Tu amigo se unió. Eres blancas.",
+connConnectedGuest:"<b>¡Conectado!</b> Te uniste. Eres negras.",
+connDisconnected:"<b>El oponente se desconectó.</b> Puedes seguir mirando el tablero o volver al menú para una nueva partida.",
+menuPeerJSMissing:"No se pudo cargar la biblioteca multijugador (PeerJS). Revisa tu conexión e inténtalo de nuevo — el robot y la partida local siguen funcionando.",
+menuPeerJSMissingShort:"No se pudo cargar la biblioteca multijugador (PeerJS). Revisa tu conexión e inténtalo de nuevo.",
+menuCreatingRoom:"Creando la sala {code}…",
+menuRoomLive:"La sala {code} está activa — envía el código a tu amigo.",
+menuJoining:"Uniéndose a la sala {code}…",
+menuTypeCode:"Escribe primero un código de sala.",
+menuJoined:"¡Te uniste a la sala {code}! Esperando el tablero…",
+menuStillTrying:"Sigo intentando contactar con la sala {code} — ¿el código es correcto y la sala de tu amigo sigue abierta?",
+menuCouldNotCreate:"No se pudo crear la sala ({err}). Inténtalo de nuevo.",
+menuCouldNotJoin:"No se pudo entrar en la sala {code} ({err}). Revisa el código.",
+menuLooking:"Buscando un oponente…",
+menuWaitingOpp:"Esperando un oponente… (puesto {slot} del vestíbulo)",
+menuOppFound:"¡Oponente encontrado — buena suerte!",
+menuSlotsBusy:"Todos los puestos del vestíbulo están ocupados ahora mismo — inténtalo de nuevo en unos segundos, o crea una sala.",
+menuRematchWaiting:"Revancha solicitada — esperando al anfitrión…",
+menuDeepLink:"Sala {code} detectada — pulsa Entrar en la sala para unirte.",
+copyPrompt:"Copia el enlace de tu sala:",
+copyShareText:"Sala de Cavalaria {code} — únete a mí: {link}"
+},
+zh:{
+pageTitle:"Cavalaria —— 骑兵棋。免费。",
+tagline:"骑兵棋——每枚棋子既是骑士又是兵。永远免费。",
+badge:"免费 • 无需注册 • 电脑 + 手机",
+menuTitle:"选择模式",
+menuIntro:"三种骑行方式。阵型决定开局——河流决定中盘。",
+mode1Title:"1 &nbsp;自选阵型",
+mode1Desc:"为双方各选一个阵型，并开关河流。你的战斗，你的布置。",
+mode2Title:"2 &nbsp;主模式——蒙古 vs 罗马",
+mode2Desc:"<b style=\"color:#fff\">白方采用蒙古阵型，黑方采用罗马阵型。</b>白方永远先行。河流开或关，由你决定。",
+mode3Title:"3 &nbsp;随机",
+mode3Desc:"双方随机采用罗马或蒙古阵型——棋盘出现之前，你不会知道自己是哪一方。河流永远开启，形状随机。",
+lblWhiteFormation:"白方阵型",
+lblBlackFormation:"黑方阵型",
+lblRiver:"河流",
+optRiverOn:"河流开启",
+optRiverOff:"河流关闭",
+riverNoteFixed:"固定河流，位于第 {ranks} 行，每列一个河格。",
+riverNoteRandom:"随机河流：每列一个河格，位于第 {ranks} 行，始终连通。",
+lblBoardSize:"棋盘大小",
+optBoard8:"8 × 8 —— 经典（每方 16 枚棋子）",
+optBoard12:"12 × 12 —— 大棋盘（每方 28 枚棋子）",
+boardNote:"适用于所有模式和所有玩法。加入房间时使用房主的棋盘。",
+randomNote:"随机模式：每方随机抽取阵型（罗马或蒙古），河流始终开启，形状随机连通——每列一个河格，同一列绝不会出现两个河格。白方永远先行。",
+lblName:"你的名字",
+phName:"例如：Alex",
+lblBot:"机器人",
+optBotMedium:"中等（贪心）",
+optBotEasy:"简单（随机）",
+btnCreate:"➕ 创建房间<br><small style=\"font-weight:500;font-size:12px\">获得代码，发给朋友</small>",
+btnAnyone:"🌍 与任何人对战<br><small style=\"font-weight:500;font-size:12px\">与陌生人配对</small>",
+btnBot:"🤖 与机器人对战<br><small style=\"font-weight:500;font-size:12px\">单人，马上开始</small>",
+btnLocal:"👥 本地双人<br><small style=\"font-weight:500;font-size:12px\">同一屏幕，轮流下棋</small>",
+phJoinCode:"房间代码——例如 KQ7B",
+btnJoin:"加入房间 →",
+rulesTitle:"Cavalaria 玩法",
+rule1:"<b>每枚棋子都是 Cavalaria</b>——骑士与兵的结合体。每枚棋子有<b>两种</b>走法：像兵一样（向前走 1 格，第一步可向前走 2 格，斜向前 1 格吃子）<b>和</b>像骑士一样（一个方向走 2 格、再向侧面走 1 格，可以跳过棋子）。",
+rule2:"<b>全歼敌军即可获胜。</b>没有王，也没有将死——吃掉对方<b>所有</b>棋子即可获胜。没有升变，也没有吃过路兵。",
+rule3:"<b>河流会拖慢你。</b>进入河格是正常的一步。<b>离开</b>河格要多花一格：从河格出发的骑士跳跃只能是<b>向前 1 格 + 向侧面 1 格</b>（一步斜走），而不是 2 + 1。这笔费用只在走法开始时算一次——跳<i>过</i>河流、或再次落入河流都不需要额外费用。离开河流的兵仍然可以向前走 1 格或斜吃 1 格——但不能用双步离开河流（出河费用吃掉了第二格）。",
+rule4:"<b>最后的棋子会变强。</b>当一方只剩下最后一枚棋子时，玩家可以为它选择一项额外能力：<b>♜ 车</b>（沿直线滑动）或 <b>♝ 象</b>（沿斜线滑动）。它同时保留骑士和兵的走法。",
+rule5:"<b>阵型是真正的骑兵阵型。</b>每方 16 枚棋子，分三排。<b>罗马</b>——密集方阵，8 + 6 + 2。<b>蒙古</b>——两翼张开，6 + 6 + 4。",
+rule6:"<b>白方永远先行</b>，所有模式都一样——随机模式也不例外。",
+rule7:"<b>无棋可走？跳过回合。</b>如果一方没有任何合法走法，回合直接交给对方。如果双方都无棋可走，则为和棋。",
+rule8:"<b>随机河流，真正随机。</b>每列一个河格，位于第 4 或第 5 行——因此河流始终是横贯棋盘的一条连通水带，同一列绝不会出现上下叠放的两个河格（那样会困住试图出河的兵）。不同列可以共享同一行。",
+rule9:"<b>棋盘大小。</b>12×12 棋盘（“大棋盘”）规则相同，<b>每方 28 枚棋子，分四排</b>，河流位于第 6–7 行，每列一个河格。在上方选择大小——适用于所有模式。",
+rule10:"<b>走法总会送达。</b>每一步都会发送完整棋盘，对方确认收到，双方每隔几秒互相核对——如果某一步丢失了，棋盘会自行修复。",
+lblRiverFixed:"河流（固定）",
+lblRiver12:"河流 12×12（固定）",
+capRiverFixed:"第 5 行和第 4 行，每列一个河格。",
+capRiver12:"第 7 行和第 6 行，每列一个河格。",
+btnFlip:"⇅ 翻转棋盘",
+btnSoundOn:"🔊 音效开",
+btnSoundOff:"🔇 音效关",
+btnMenu:"← 菜单",
+hRoom:"房间",
+hCaptured:"已吃子",
+hMoves:"棋步",
+btnCopy:"复制代码 / 链接",
+copied:"已复制！",
+btnRematch:"🐎 再来一局（新开局）",
+btnResign:"🏳 认输",
+empowerTitle:"最后的棋子！",
+empowerText:"{color}——你的最后一枚 Cavalaria 获得一项额外能力。请选择一项——它同时保留骑士和兵的走法。",
+empowerRook:"<b>♜</b>车<br><small style=\"font-weight:500\">沿直线滑动</small>",
+empowerBishop:"<b>♝</b>象<br><small style=\"font-weight:500\">沿斜线滑动</small>",
+overRematch:"🐎 再来一局",
+overMenu:"菜单",
+footer:"Cavalaria v1.8——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
+statusToMove:"{color}行棋",
+statusYourMove:"轮到你了。",
+statusWaitingOpp:"等待对手…",
+statusBotThinking:"机器人思考中…",
+statusLastUnit:"{color}——最后的棋子！",
+subChoosePower:"选择它的额外能力：车或象。",
+subBotChoosing:"机器人正在选择额外能力…",
+subWaitingChoose:"等待{color}选择额外能力…",
+winWhite:"♘ 白方获胜！",
+winBlack:"♞ 黑方获胜！",
+draw:"🤝 和棋",
+reasonNoPiecesBoth:"双方棋子都已吃完。和棋！",
+reasonWhiteOut:"白方没有棋子了。黑方获胜！",
+reasonBlackOut:"黑方没有棋子了。白方获胜！",
+reasonNoMoves:"双方都无棋可走——和棋。",
+reasonResigned:"{color}认输。",
+passNote:"{color}无棋可走——回合交给{other}。",
+pillWhite:"♘ 白方：{n} • {formation}",
+pillBlack:"♞ 黑方：{n} • {formation}",
+pillRiverOn:"河流开启",
+pillRiverOff:"河流关闭",
+modeChoose:"自选阵型",
+modeMain:"蒙古 vs 罗马",
+modeRandom:"随机",
+seed:"种子 {seed}",
+capWhiteTook:"♘ 白方吃子：{x}",
+capBlackTook:"♞ 黑方吃子：{x}",
+movesEmpty:"还没有棋步——阵型已就位，现在出发吧。",
+moveEmpower:"★ {color}的最后一枚棋子获得{piece} {glyph}",
+pieceRook:"车",
+pieceBishop:"象",
+colorWhite:"白方",
+colorBlack:"黑方",
+botMedium:"中等",
+botEasy:"简单",
+connLocal:"本地对局",
+connOnline:"在线对局",
+connLocal2p:"本地双人——同一屏幕，轮流下棋。",
+connBot:"你（白方） vs 机器人（{level}）。机器人执黑。",
+connBotRematch:"你（白方） vs 机器人。",
+connLocalRematch:"本地双人——新开局！",
+connRoomWaiting:"房间 <b>{code}</b>——等待朋友加入…<br>把代码发给他们，或使用下方的复制按钮。",
+connLobbyWaiting:"大厅（{slot} 号位）——等待对手加入…",
+connOnlineBlack:"在线对局——你是<b>黑方</b>。",
+connRematchSwap:"在线对局——再来一局！双方换边。",
+connConnectedHost:"<b>已连接！</b>朋友加入了。你是白方。",
+connConnectedGuest:"<b>已连接！</b>你已加入。你是黑方。",
+connDisconnected:"<b>对手已断开连接。</b>你可以继续查看棋盘，或返回菜单开始新对局。",
+menuPeerJSMissing:"无法加载多人游戏库（PeerJS）。请检查网络后重试——机器人和本地对战仍可使用。",
+menuPeerJSMissingShort:"无法加载多人游戏库（PeerJS）。请检查网络后重试。",
+menuCreatingRoom:"正在创建房间 {code}…",
+menuRoomLive:"房间 {code} 已创建——把代码发给朋友吧。",
+menuJoining:"正在加入房间 {code}…",
+menuTypeCode:"请先输入房间代码。",
+menuJoined:"已加入房间 {code}！等待棋盘…",
+menuStillTrying:"仍在尝试连接房间 {code}——代码正确吗？朋友的房间还开着吗？",
+menuCouldNotCreate:"无法创建房间（{err}）。请重试。",
+menuCouldNotJoin:"无法加入房间 {code}（{err}）。请检查代码。",
+menuLooking:"正在寻找对手…",
+menuWaitingOpp:"等待对手…（大厅 {slot} 号位）",
+menuOppFound:"找到对手了——祝好运！",
+menuSlotsBusy:"大厅位置目前已满——几秒后再试，或自己创建一个房间。",
+menuRematchWaiting:"已请求再来一局——等待房主…",
+menuDeepLink:"检测到房间 {code}——点击“加入房间”进入。",
+copyPrompt:"复制你的房间链接：",
+copyShareText:"Cavalaria 房间 {code}——加入我：{link}"
+},
+ja:{
+pageTitle:"Cavalaria — 騎兵チェス。無料。",
+tagline:"騎兵チェス——すべての駒はナイトでありポーン。ずっと無料。",
+badge:"無料 • 登録不要 • PC + モバイル",
+menuTitle:"モードを選ぶ",
+menuIntro:"3つの乗り方。布陣が序盤を決め、川が中盤を決める。",
+mode1Title:"1 &nbsp;布陣を選ぶ",
+mode1Desc:"両陣営の布陣を選び、川のオン・オフを切り替える。戦いは君のもの、布陣も君のもの。",
+mode2Title:"2 &nbsp;メイン — モンゴル vs ローマ",
+mode2Desc:"<b style=\"color:#fff\">白はモンゴル、黒はローマで進軍。</b>白が常に先手。川のオン・オフは君次第。",
+mode3Title:"3 &nbsp;ランダム",
+mode3Desc:"両陣営がランダムにローマかモンゴルになる——盤面が現れるまで自分がどちらか分からない。川は常にオンで、形はランダム。",
+lblWhiteFormation:"白の布陣",
+lblBlackFormation:"黒の布陣",
+lblRiver:"川",
+optRiverOn:"川あり",
+optRiverOff:"川なし",
+riverNoteFixed:"固定の川：{ranks}段目、各列に1マス。",
+riverNoteRandom:"ランダムな川：各列に1マス、{ranks}段目、常につながっている。",
+lblBoardSize:"盤面サイズ",
+optBoard8:"8 × 8 — クラシック（各16駒）",
+optBoard12:"12 × 12 — グランド（各28駒）",
+boardNote:"すべてのモードと遊び方に適用される。部屋に参加するとホストの盤面が使われる。",
+randomNote:"ランダムモード：布陣は陣営ごとに抽選（ローマかモンゴル）、川は常時オンでランダムなつながった形——各列に1マス、同じ列に2マスは決してない。白が常に先手。",
+lblName:"あなたの名前",
+phName:"例：Alex",
+lblBot:"ボット",
+optBotMedium:"中級（欲張り）",
+optBotEasy:"初級（ランダム）",
+btnCreate:"➕ 部屋を作る<br><small style=\"font-weight:500;font-size:12px\">コードを取得して友だちに送る</small>",
+btnAnyone:"🌍 誰かと遊ぶ<br><small style=\"font-weight:500;font-size:12px\">見知らぬ人とマッチング</small>",
+btnBot:"🤖 ボットと遊ぶ<br><small style=\"font-weight:500;font-size:12px\">ひとりで、今すぐ</small>",
+btnLocal:"👥 ローカル2人対戦<br><small style=\"font-weight:500;font-size:12px\">同じ画面で交互に</small>",
+phJoinCode:"部屋コード — 例：KQ7B",
+btnJoin:"部屋に入る →",
+rulesTitle:"Cavalariaの遊び方",
+rule1:"<b>すべての駒はCavalaria</b>——ナイトとポーンの融合。各駒は<b>両方</b>の動きができる：ポーンとして（前に1マス、初手は前に2マス、斜め前に1マスで取る）<b>そして</b>ナイトとして（一方向に2マス、横に1マス、駒を飛び越える）。",
+rule2:"<b>敵を全滅させれば勝ち。</b>キングもチェックメイトもない——相手の駒を<b>すべて</b>取れば勝ち。成りもアンパッサンもない。",
+rule3:"<b>川は足を遅くする。</b>川のマスに入るのは普通の1手。<b>出る</b>ときは1マス余計にかかる：川のマスからのナイトの跳躍は2+1ではなく<b>前に1 + 横に1</b>（斜め1歩）だけ。コストは手の最初に1回だけ——川を<i>飛び越える</i>のも、再び川に入るのも追加コストなし。川から出るポーンは前に1歩か斜めに1つ取るのは変わらないが、2マス進みで川から出ることはできない（出るコストが2マス目を食う）。",
+rule4:"<b>最後の1駒は強くなる。</b>片方が最後の1駒だけになったら、そのプレイヤーは追加の力を選ぶ：<b>♜ ルーク</b>（タテ・ヨコにスライド）または <b>♝ ビショップ</b>（ナナメにスライド）。ナイトとポーンの動きもそのまま残る。",
+rule5:"<b>布陣は本物の騎兵隊形。</b>各16駒、3列。<b>ローマ</b>——密集した塊、8 + 6 + 2。<b>モンゴル</b>——角を大きく広げて、6 + 6 + 4。",
+rule6:"<b>白が常に先手</b>、どのモードでも——ランダムでも。",
+rule7:"<b>手がない？ パス。</b>合法手がない陣営は、そのまま相手に手番が渡る。両方とも動けなければ引き分け。",
+rule8:"<b>ランダムな川は、本当にランダム。</b>各列に1マスの川、4段目か5段目——川は常に盤面を横切る1本のつながった帯になり、同じ列に2マス重なることは決してない（ポーンが川から出られなくなるため）。列ごとに段目は違ってよい。",
+rule9:"<b>盤面サイズ。</b>12×12盤（「グランド」）も同じルールで、<b>各28駒・4列</b>、川は6–7段目で各列に1マス。上でサイズを選ぶ——すべてのモードに適用される。",
+rule10:"<b>手は必ず届く。</b>すべての手は盤面全体を送り、相手が確認し、両方が数秒ごとに照合する——万が一手が失われても、盤面は自動で修復される。",
+lblRiverFixed:"川（固定）",
+lblRiver12:"川 12×12（固定）",
+capRiverFixed:"5段目と4段目、各列に1マス。",
+capRiver12:"7段目と6段目、各列に1マス。",
+btnFlip:"⇅ 盤面を反転",
+btnSoundOn:"🔊 音オン",
+btnSoundOff:"🔇 音オフ",
+btnMenu:"← メニュー",
+hRoom:"部屋",
+hCaptured:"取った駒",
+hMoves:"棋譜",
+btnCopy:"コード / リンクをコピー",
+copied:"コピーしました！",
+btnRematch:"🐎 再戦（新しい布陣）",
+btnResign:"🏳 投了",
+empowerTitle:"最後の1駒！",
+empowerText:"{color}——最後のCavalariaが追加の力を得る。1つ選ぼう——ナイトとポーンの動きも残る。",
+empowerRook:"<b>♜</b>ルーク<br><small style=\"font-weight:500\">タテ・ヨコにスライド</small>",
+empowerBishop:"<b>♝</b>ビショップ<br><small style=\"font-weight:500\">ナナメにスライド</small>",
+overRematch:"🐎 再戦",
+overMenu:"メニュー",
+footer:"Cavalaria v1.8 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
+statusToMove:"{color}の番",
+statusYourMove:"あなたの番です。",
+statusWaitingOpp:"相手を待っています…",
+statusBotThinking:"ボットが考えています…",
+statusLastUnit:"{color}——最後の1駒！",
+subChoosePower:"追加の力を選ぶ：ルークかビショップ。",
+subBotChoosing:"ボットが追加の力を選んでいます…",
+subWaitingChoose:"{color}が追加の力を選ぶのを待っています…",
+winWhite:"♘ 白の勝ち！",
+winBlack:"♞ 黒の勝ち！",
+draw:"🤝 引き分け",
+reasonNoPiecesBoth:"両陣営とも駒がなくなった。引き分け！",
+reasonWhiteOut:"白に駒がなくなった。黒の勝ち！",
+reasonBlackOut:"黒に駒がなくなった。白の勝ち！",
+reasonNoMoves:"どちらも手がない——引き分け。",
+reasonResigned:"{color}が投了しました。",
+passNote:"{color}に手がない——手番は{other}へ。",
+pillWhite:"♘ 白：{n} • {formation}",
+pillBlack:"♞ 黒：{n} • {formation}",
+pillRiverOn:"川あり",
+pillRiverOff:"川なし",
+modeChoose:"布陣を選ぶ",
+modeMain:"モンゴル vs ローマ",
+modeRandom:"ランダム",
+seed:"シード {seed}",
+capWhiteTook:"♘ 白が取った：{x}",
+capBlackTook:"♞ 黒が取った：{x}",
+movesEmpty:"まだ手はない——布陣は整った、あとは駆けるだけ。",
+moveEmpower:"★ {color}の最後の1駒が{piece}{glyph}の力を得た",
+pieceRook:"ルーク",
+pieceBishop:"ビショップ",
+colorWhite:"白",
+colorBlack:"黒",
+botMedium:"中級",
+botEasy:"初級",
+connLocal:"ローカル対局",
+connOnline:"オンライン対局",
+connLocal2p:"ローカル2人対戦——同じ画面で交互に。",
+connBot:"あなた（白） vs ボット（{level}）。ボットは黒。",
+connBotRematch:"あなた（白） vs ボット。",
+connLocalRematch:"ローカル2人対戦——新しい布陣！",
+connRoomWaiting:"部屋 <b>{code}</b>——友だちの参加を待っています…<br>コードを送るか、下のコピーボタンを使ってください。",
+connLobbyWaiting:"ロビー（スロット{slot}）——相手の参加を待っています…",
+connOnlineBlack:"オンライン対局——あなたは<b>黒</b>です。",
+connRematchSwap:"オンライン対局——再戦！ 色を入れ替え。",
+connConnectedHost:"<b>接続しました！</b>友だちが参加した。あなたは白です。",
+connConnectedGuest:"<b>接続しました！</b>参加しました。あなたは黒です。",
+connDisconnected:"<b>相手が切断しました。</b>盤面を眺め続けることも、メニューに戻って新しい対局を始めることもできます。",
+menuPeerJSMissing:"マルチプレイヤーのライブラリ（PeerJS）を読み込めませんでした。接続を確認して再試行してください——ボットとローカル対戦は使えます。",
+menuPeerJSMissingShort:"マルチプレイヤーのライブラリ（PeerJS）を読み込めませんでした。接続を確認して再試行してください。",
+menuCreatingRoom:"部屋 {code} を作成中…",
+menuRoomLive:"部屋 {code} が開いた——友だちにコードを送ろう。",
+menuJoining:"部屋 {code} に参加中…",
+menuTypeCode:"まず部屋コードを入力してください。",
+menuJoined:"部屋 {code} に参加した！ 盤面を待っています…",
+menuStillTrying:"部屋 {code} に接続を試みています——コードは合っている？ 友だちの部屋はまだ開いている？",
+menuCouldNotCreate:"部屋を作れませんでした（{err}）。再試行してください。",
+menuCouldNotJoin:"部屋 {code} に入れませんでした（{err}）。コードを確認してください。",
+menuLooking:"相手を探しています…",
+menuWaitingOpp:"相手を待っています…（ロビーのスロット{slot}）",
+menuOppFound:"相手が見つかった——健闘を祈る！",
+menuSlotsBusy:"ロビーのスロットは今すべて埋まっている——数秒後にもう一度試すか、部屋を作ってください。",
+menuRematchWaiting:"再戦をリクエストした——ホストを待っています…",
+menuDeepLink:"部屋 {code} を検出——「部屋に入る」を押して参加。",
+copyPrompt:"部屋のリンクをコピー：",
+copyShareText:"Cavalariaの部屋 {code}——参加して：{link}"
+},
+fr:{
+pageTitle:"Cavalaria — Échecs de cavalerie. Gratuit.",
+tagline:"Échecs de cavalerie — chaque pièce est un cavalier et un pion. Gratuit pour toujours.",
+badge:"GRATUIT • SANS INSCRIPTION • PC + MOBILE",
+menuTitle:"Choisissez un mode",
+menuIntro:"Trois façons de chevaucher. Les formations décident de l'ouverture — la rivière décide du milieu de partie.",
+mode1Title:"1 &nbsp;Choisir les formations",
+mode1Desc:"Choisissez une formation pour chaque camp et activez ou non la rivière. Votre bataille, votre dispositif.",
+mode2Title:"2 &nbsp;Principal — Mongol contre Romain",
+mode2Desc:"<b style=\"color:#fff\">Les Blancs chevauchent en formation mongole, les Noirs en formation romaine.</b> Les Blancs jouent toujours en premier. Rivière activée ou non, c'est vous qui décidez.",
+mode3Title:"3 &nbsp;Aléatoire",
+mode3Desc:"Chaque camp est aléatoirement romain ou mongol — vous ne saurez pas qui vous êtes avant l'apparition de l'échiquier. La rivière est toujours activée, avec une forme aléatoire.",
+lblWhiteFormation:"Formation des Blancs",
+lblBlackFormation:"Formation des Noirs",
+lblRiver:"Rivière",
+optRiverOn:"Rivière activée",
+optRiverOff:"Rivière désactivée",
+riverNoteFixed:"Rivière fixe sur les rangées {ranks}, une case par colonne.",
+riverNoteRandom:"Rivière aléatoire : une case par colonne, rangées {ranks}, toujours connectée.",
+lblBoardSize:"Taille de l'échiquier",
+optBoard8:"8 × 8 — Classique (16 pièces par camp)",
+optBoard12:"12 × 12 — Grand (28 pièces par camp)",
+boardNote:"S'applique à tous les modes et à toutes les façons de jouer. Rejoindre une salle utilise l'échiquier de l'hôte.",
+randomNote:"Mode aléatoire : les formations sont tirées au sort par camp (romaine ou mongole chacune), la rivière est toujours activée avec une forme aléatoire et connectée — une case par colonne, jamais deux dans la même colonne. Les Blancs jouent toujours en premier.",
+lblName:"Votre nom",
+phName:"p. ex. Alex",
+lblBot:"Robot",
+optBotMedium:"Moyen (gourmand)",
+optBotEasy:"Facile (aléatoire)",
+btnCreate:"➕ Créer une salle<br><small style=\"font-weight:500;font-size:12px\">obtenez un code, envoyez-le à un ami</small>",
+btnAnyone:"🌍 Jouer contre n'importe qui<br><small style=\"font-weight:500;font-size:12px\">jumelé avec un inconnu</small>",
+btnBot:"🤖 Jouer contre le robot<br><small style=\"font-weight:500;font-size:12px\">en solo, tout de suite</small>",
+btnLocal:"👥 2 joueurs en local<br><small style=\"font-weight:500;font-size:12px\">même écran, à tour de rôle</small>",
+phJoinCode:"Code de salle — p. ex. KQ7B",
+btnJoin:"Rejoindre la salle →",
+rulesTitle:"Comment fonctionne Cavalaria",
+rule1:"<b>Chaque pièce est une Cavalaria</b> — une fusion de cavalier et de pion. Chacune se déplace des <b>deux</b> façons : comme un pion (1 case en avant, 2 en avant à son premier coup, capture 1 case en diagonale vers l'avant) <b>et</b> comme un cavalier (2 cases dans une direction et 1 sur le côté, en sautant par-dessus les pièces).",
+rule2:"<b>Gagnez en anéantissant l'ennemi.</b> Il n'y a ni rois ni échec et mat — capturez <b>toutes</b> les pièces du camp adverse pour gagner. Pas de promotion ni de prise en passant.",
+rule3:"<b>La rivière vous ralentit.</b> Entrer sur une case de rivière est un coup normal. En <b>sortir</b> coûte une case de plus : le saut de cavalier depuis une case de rivière n'est que de <b>1 en avant + 1 sur le côté</b> (un seul pas diagonal) au lieu de 2 + 1. Cela ne compte qu'une fois, au début du coup — sauter <i>par-dessus</i> la rivière, ou y atterrir de nouveau, ne coûte rien de plus. Un pion qui sort de la rivière avance toujours de 1 en avant ou capture 1 en diagonale — mais il ne peut pas faire le double pas pour sortir de la rivière (le coût de sortie mange la deuxième case).",
+rule4:"<b>La dernière unité devient plus forte.</b> Quand un camp n'a plus que sa toute dernière pièce, son joueur choisit un pouvoir supplémentaire pour elle : <b>♜ Tour</b> (glisse le long des rangées et des colonnes) ou <b>♝ Fou</b> (glisse le long des diagonales). Elle garde aussi ses déplacements de cavalier et de pion.",
+rule5:"<b>Les formations sont de la vraie cavalerie.</b> 16 pièces par camp, sur trois rangées. <b>Romain</b> — un bloc solide, 8 + 6 + 2. <b>Mongol</b> — les cornes bien ouvertes, 6 + 6 + 4.",
+rule6:"<b>Les Blancs jouent toujours en premier</b>, dans tous les modes — même en Aléatoire.",
+rule7:"<b>Pas de coup ? On passe.</b> Si un camp n'a aucun coup légal, le tour passe simplement à l'autre camp. Si aucun camp ne peut bouger, c'est un match nul.",
+rule8:"<b>Rivière aléatoire, vraiment aléatoire.</b> Une case de rivière par colonne, sur la rangée 4 ou 5 — la rivière est donc toujours une bande continue à travers l'échiquier, jamais deux cases empilées dans la même colonne (cela piégerait un pion qui essaie de sortir de la rivière). Les colonnes peuvent partager une rangée.",
+rule9:"<b>Taille de l'échiquier.</b> L'échiquier 12×12 (« Grand ») suit les mêmes règles avec <b>28 pièces par camp sur quatre rangées</b> et la rivière sur les rangées 6–7, une case par colonne. Choisissez la taille ci-dessus — elle s'applique à tous les modes.",
+rule10:"<b>Les coups arrivent toujours.</b> Chaque coup envoie tout l'échiquier, l'autre camp le confirme, et les deux camps comparent leurs notes toutes les quelques secondes — si un coup se perd, les échiquiers se réparent tout seuls.",
+lblRiverFixed:"Rivière (fixe)",
+lblRiver12:"Rivière 12×12 (fixe)",
+capRiverFixed:"Rangées 5 et 4, une case par colonne.",
+capRiver12:"Rangées 7 et 6, une case par colonne.",
+btnFlip:"⇅ Retourner l'échiquier",
+btnSoundOn:"🔊 Son activé",
+btnSoundOff:"🔇 Son désactivé",
+btnMenu:"← Menu",
+hRoom:"Salle",
+hCaptured:"Capturées",
+hMoves:"Coups",
+btnCopy:"Copier le code / le lien",
+copied:"Copié !",
+btnRematch:"🐎 Revanche (nouveau dispositif)",
+btnResign:"🏳 Abandonner",
+empowerTitle:"Dernière unité debout !",
+empowerText:"{color} — votre dernière Cavalaria gagne un pouvoir supplémentaire. Choisissez-en un — elle garde aussi ses déplacements de cavalier et de pion.",
+empowerRook:"<b>♜</b>Tour<br><small style=\"font-weight:500\">glisse le long des rangées et des colonnes</small>",
+empowerBishop:"<b>♝</b>Fou<br><small style=\"font-weight:500\">glisse le long des diagonales</small>",
+overRematch:"🐎 Revanche",
+overMenu:"Menu",
+footer:"Cavalaria v1.8 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
+statusToMove:"Aux {color} de jouer",
+statusYourMove:"À vous de jouer.",
+statusWaitingOpp:"En attente de l'adversaire…",
+statusBotThinking:"Le robot réfléchit…",
+statusLastUnit:"{color} — dernière unité debout !",
+subChoosePower:"Choisissez son pouvoir supplémentaire : Tour ou Fou.",
+subBotChoosing:"Le robot choisit son pouvoir supplémentaire…",
+subWaitingChoose:"En attente du choix de pouvoir supplémentaire des {color}…",
+winWhite:"♘ Les Blancs gagnent !",
+winBlack:"♞ Les Noirs gagnent !",
+draw:"🤝 Match nul",
+reasonNoPiecesBoth:"Il ne reste plus aucune pièce d'aucun côté. Match nul !",
+reasonWhiteOut:"Les Blancs n'ont plus de pièces. Les Noirs gagnent !",
+reasonBlackOut:"Les Noirs n'ont plus de pièces. Les Blancs gagnent !",
+reasonNoMoves:"Aucun camp n'a de coup — match nul.",
+reasonResigned:"Les {color} abandonnent.",
+passNote:"Les {color} n'ont pas de coup — le tour passe aux {other}.",
+pillWhite:"♘ Blancs : {n} • {formation}",
+pillBlack:"♞ Noirs : {n} • {formation}",
+pillRiverOn:"Rivière activée",
+pillRiverOff:"Rivière désactivée",
+modeChoose:"Choisir les formations",
+modeMain:"Mongol contre Romain",
+modeRandom:"Aléatoire",
+seed:"Graine {seed}",
+capWhiteTook:"♘ Les Blancs ont pris : {x}",
+capBlackTook:"♞ Les Noirs ont pris : {x}",
+movesEmpty:"Aucun coup pour l'instant — les formations sont en place, à vous de chevaucher.",
+moveEmpower:"★ La dernière unité des {color} gagne {piece} {glyph}",
+pieceRook:"Tour",
+pieceBishop:"Fou",
+colorWhite:"Blancs",
+colorBlack:"Noirs",
+botMedium:"Moyen",
+botEasy:"Facile",
+connLocal:"Partie locale",
+connOnline:"Partie en ligne",
+connLocal2p:"2 joueurs en local — même écran, à tour de rôle.",
+connBot:"Vous (Blancs) contre Robot ({level}). Le robot joue les Noirs.",
+connBotRematch:"Vous (Blancs) contre Robot.",
+connLocalRematch:"2 joueurs en local — nouveau dispositif !",
+connRoomWaiting:"Salle <b>{code}</b> — en attente de votre ami…<br>Envoyez-lui le code, ou utilisez le bouton de copie ci-dessous.",
+connLobbyWaiting:"Dans le salon (emplacement {slot}) — en attente d'un adversaire…",
+connOnlineBlack:"Partie en ligne — vous êtes les <b>Noirs</b>.",
+connRematchSwap:"Partie en ligne — revanche ! Couleurs échangées.",
+connConnectedHost:"<b>Connecté !</b> Votre ami a rejoint. Vous êtes les Blancs.",
+connConnectedGuest:"<b>Connecté !</b> Vous avez rejoint. Vous êtes les Noirs.",
+connDisconnected:"<b>L'adversaire s'est déconnecté.</b> Vous pouvez continuer à regarder l'échiquier, ou revenir au menu pour une nouvelle partie.",
+menuPeerJSMissing:"Impossible de charger la bibliothèque multijoueur (PeerJS). Vérifiez votre connexion et réessayez — le robot et le jeu local fonctionnent toujours.",
+menuPeerJSMissingShort:"Impossible de charger la bibliothèque multijoueur (PeerJS). Vérifiez votre connexion et réessayez.",
+menuCreatingRoom:"Création de la salle {code}…",
+menuRoomLive:"La salle {code} est ouverte — envoyez le code à votre ami.",
+menuJoining:"Connexion à la salle {code}…",
+menuTypeCode:"Tapez d'abord un code de salle.",
+menuJoined:"Vous avez rejoint la salle {code} ! En attente de l'échiquier…",
+menuStillTrying:"Toujours en train de joindre la salle {code} — le code est-il correct, et la salle de votre ami est-elle toujours ouverte ?",
+menuCouldNotCreate:"Impossible de créer la salle ({err}). Réessayez.",
+menuCouldNotJoin:"Impossible de rejoindre la salle {code} ({err}). Vérifiez le code.",
+menuLooking:"Recherche d'un adversaire…",
+menuWaitingOpp:"En attente d'un adversaire… (emplacement {slot} du salon)",
+menuOppFound:"Adversaire trouvé — bonne chance !",
+menuSlotsBusy:"Tous les emplacements du salon sont occupés pour le moment — réessayez dans quelques secondes, ou créez une salle.",
+menuRematchWaiting:"Revanche demandée — en attente de l'hôte…",
+menuDeepLink:"Salle {code} détectée — appuyez sur Rejoindre la salle pour entrer.",
+copyPrompt:"Copiez le lien de votre salle :",
+copyShareText:"Salle Cavalaria {code} — rejoignez-moi : {link}"
+},
+ko:{
+pageTitle:"Cavalaria —— 기병 체스. 무료.",
+tagline:"기병 체스——모든 기물은 나이트이자 폰입니다. 영원히 무료.",
+badge:"무료 • 가입 불필요 • PC + 모바일",
+menuTitle:"모드 선택",
+menuIntro:"세 가지 기병 방식. 진형이 오프닝을, 강이 중반을 결정합니다.",
+mode1Title:"1 &nbsp;진형 선택",
+mode1Desc:"양쪽 진형을 고르고 강의 켜짐/꺼짐을 정하세요. 당신의 전투, 당신의 진형.",
+mode2Title:"2 &nbsp;메인 —— 몽골 vs 로마",
+mode2Desc:"<b style=\"color:#fff\">백은 몽골 진형, 흑은 로마 진형으로 진군합니다.</b> 백이 항상 먼저 둡니다. 강 켜짐/꺼짐은 당신이 정합니다.",
+mode3Title:"3 &nbsp;무작위",
+mode3Desc:"양쪽이 무작위로 로마 또는 몽골 진형이 됩니다——보드판이 나타나기 전까지 자신이 어느 쪽인지 알 수 없습니다. 강은 항상 켜져 있고 모양은 무작위입니다.",
+lblWhiteFormation:"백 진형",
+lblBlackFormation:"흑 진형",
+lblRiver:"강",
+optRiverOn:"강 켜기",
+optRiverOff:"강 끄기",
+riverNoteFixed:"고정된 강: {ranks}행, 각 열마다 한 칸.",
+riverNoteRandom:"무작위 강: 각 열마다 한 칸, {ranks}행, 항상 연결됩니다.",
+lblBoardSize:"보드 크기",
+optBoard8:"8 × 8 —— 클래식（양쪽 16개 기물）",
+optBoard12:"12 × 12 —— 그랜드（양쪽 28개 기물）",
+boardNote:"모든 모드와 모든 플레이 방식에 적용됩니다. 방에 참가하면 방장의 보드를 사용합니다.",
+randomNote:"무작위 모드: 진형은 진영마다 추첨하고（로마 또는 몽골）, 강은 항상 켜져 있으며 무작위의 연결된 모양입니다——각 열마다 한 칸, 같은 열에 두 칸이 겹치지 않습니다. 백이 항상 먼저 둡니다.",
+lblName:"이름",
+phName:"예: Alex",
+lblBot:"봇",
+optBotMedium:"중급（탐욕）",
+optBotEasy:"초급（무작위）",
+btnCreate:"➕ 방 만들기<br><small style=\"font-weight:500;font-size:12px\">코드를 받아 친구에게 보내세요</small>",
+btnAnyone:"🌍 누구와 대결<br><small style=\"font-weight:500;font-size:12px\">낯선 사람과 매칭</small>",
+btnBot:"🤖 봇과 대결<br><small style=\"font-weight:500;font-size:12px\">혼자, 지금 바로</small>",
+btnLocal:"👥 로컬 2인 플레이<br><small style=\"font-weight:500;font-size:12px\">같은 화면에서 번갈아</small>",
+phJoinCode:"방 코드 —— 예: KQ7B",
+btnJoin:"방 참가 →",
+rulesTitle:"Cavalaria 하는 방법",
+rule1:"<b>모든 기물은 Cavalaria입니다</b>——나이트와 폰의 융합체. 각 기물은 <b>두 가지</b> 방법으로 움직입니다. 폰처럼（앞으로 1칸, 첫 수에는 앞으로 2칸, 대각선 앞으로 1칸 잡기）<b>그리고</b> 나이트처럼（한 방향으로 2칸, 옆으로 1칸, 기물을 뛰어넘기）.",
+rule2:"<b>적을 전멸시키면 승리합니다.</b> 킹도 없고 체크메이트도 없습니다——상대 기물을 <b>모두</b> 잡으면 승리합니다. 승격도 앙파상도 없습니다.",
+rule3:"<b>강은 당신을 늦춥니다.</b> 강 칸에 들어가는 것은 보통의 한 수입니다. 강 칸에서 <b>나오는</b> 데는 한 칸이 더 듭니다. 강 칸에서 출발하는 나이트 점프는 2+1이 아니라 <b>앞으로 1 + 옆으로 1</b>（대각선 한 걸음）뿐입니다. 비용은 수의 시작에 한 번만 적용됩니다——강을 <i>뛰어넘거나</i> 다시 강에 착지하는 데는 추가 비용이 없습니다. 강에서 나오는 폰은 여전히 앞으로 1칸 가거나 대각선으로 1칸 잡을 수 있지만, 두 칸 전진으로 강에서 나올 수는 없습니다（나오는 비용이 두 번째 칸을 차지합니다）.",
+rule4:"<b>마지막 기물은 강해집니다.</b> 한쪽이 마지막 기물 하나만 남으면, 플레이어는 추가 능력을 선택합니다. <b>♜ 룩</b>（가로·세로로 미끄러지듯 이동）또는 <b>♝ 비숍</b>（대각선으로 이동）. 나이트와 폰의 움직임도 그대로 유지합니다.",
+rule5:"<b>진형은 진짜 기병 진형입니다.</b> 양쪽 16개 기물, 세 줄. <b>로마</b>——단단한 블록, 8 + 6 + 2. <b>몽골</b>——뿔을 넓게 벌린 형태, 6 + 6 + 4.",
+rule6:"<b>백이 항상 먼저 둡니다</b>. 모든 모드에서——무작위 모드에서도 마찬가지입니다.",
+rule7:"<b>둘 수 없나요? 차례를 넘기세요.</b> 한쪽에 둘 수 있는 수가 없으면 차례는 그냥 상대에게 넘어갑니다. 양쪽 모두 둘 수 없으면 무승부입니다.",
+rule8:"<b>무작위 강, 정말 무작위입니다.</b> 각 열마다 강 칸 하나, 4행 또는 5행——강은 항상 보드를 가로지르는 하나의 연결된 띠가 되며, 같은 열에 두 칸이 겹치지 않습니다（강에서 나오려는 폰이 갇히기 때문입니다）. 열마다 행을 공유할 수 있습니다.",
+rule9:"<b>보드 크기.</b> 12×12 보드（「그랜드」）도 같은 규칙으로 <b>양쪽 28개 기물, 네 줄</b>이며, 강은 6–7행에 각 열마다 한 칸씩 있습니다. 위에서 크기를 선택하세요——모든 모드에 적용됩니다.",
+rule10:"<b>수는 항상 도착합니다.</b> 모든 수는 전체 보드를 보내고, 상대가 확인하며, 양쪽이 몇 초마다 서로 대조합니다——수가 유실되더라도 보드는 스스로 복구됩니다.",
+lblRiverFixed:"강（고정）",
+lblRiver12:"강 12×12（고정）",
+capRiverFixed:"5행과 4행, 각 열마다 한 칸.",
+capRiver12:"7행과 6행, 각 열마다 한 칸.",
+btnFlip:"⇅ 보드 뒤집기",
+btnSoundOn:"🔊 소리 켜기",
+btnSoundOff:"🔇 소리 끄기",
+btnMenu:"← 메뉴",
+hRoom:"방",
+hCaptured:"잡은 기물",
+hMoves:"수순",
+btnCopy:"코드 / 링크 복사",
+copied:"복사됨!",
+btnRematch:"🐎 재대결（새 진형）",
+btnResign:"🏳 기권",
+empowerTitle:"마지막 기물!",
+empowerText:"{color}——마지막 Cavalaria가 추가 능력을 얻습니다. 하나를 선택하세요——나이트와 폰의 움직임도 그대로 유지됩니다.",
+empowerRook:"<b>♜</b>룩<br><small style=\"font-weight:500\">가로·세로로 이동</small>",
+empowerBishop:"<b>♝</b>비숍<br><small style=\"font-weight:500\">대각선으로 이동</small>",
+overRematch:"🐎 재대결",
+overMenu:"메뉴",
+footer:"Cavalaria v1.8——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
+statusToMove:"{color} 차례",
+statusYourMove:"당신의 차례입니다.",
+statusWaitingOpp:"상대를 기다리는 중…",
+statusBotThinking:"봇이 생각 중…",
+statusLastUnit:"{color}——마지막 기물!",
+subChoosePower:"추가 능력을 선택하세요: 룩 또는 비숍.",
+subBotChoosing:"봇이 추가 능력을 선택하는 중…",
+subWaitingChoose:"{color}의 추가 능력 선택을 기다리는 중…",
+winWhite:"♘ 백 승리!",
+winBlack:"♞ 흑 승리!",
+draw:"🤝 무승부",
+reasonNoPiecesBoth:"양쪽 모두 기물이 남지 않았습니다. 무승부!",
+reasonWhiteOut:"백의 기물이 없습니다. 흑 승리!",
+reasonBlackOut:"흑의 기물이 없습니다. 백 승리!",
+reasonNoMoves:"양쪽 모두 둘 수가 없습니다——무승부.",
+reasonResigned:"{color}이 기권했습니다.",
+passNote:"{color} 둘 수가 없습니다——차례가 {other}에게 넘어갑니다.",
+pillWhite:"♘ 백: {n} • {formation}",
+pillBlack:"♞ 흑: {n} • {formation}",
+pillRiverOn:"강 켜기",
+pillRiverOff:"강 끄기",
+modeChoose:"진형 선택",
+modeMain:"몽골 vs 로마",
+modeRandom:"무작위",
+seed:"시드 {seed}",
+capWhiteTook:"♘ 백이 잡은 기물: {x}",
+capBlackTook:"♞ 흑이 잡은 기물: {x}",
+movesEmpty:"아직 둔 수가 없습니다——진형은 준비됐습니다. 이제 질주하세요.",
+moveEmpower:"★ {color}의 마지막 기물이 {piece}{glyph} 능력을 얻었습니다",
+pieceRook:"룩",
+pieceBishop:"비숍",
+colorWhite:"백",
+colorBlack:"흑",
+botMedium:"중급",
+botEasy:"초급",
+connLocal:"로컬 대국",
+connOnline:"온라인 대국",
+connLocal2p:"로컬 2인 플레이——같은 화면에서 번갈아 둡니다.",
+connBot:"당신（백） vs 봇（{level}）. 봇은 흑으로 둡니다.",
+connBotRematch:"당신（백） vs 봇.",
+connLocalRematch:"로컬 2인 플레이——새 진형!",
+connRoomWaiting:"방 <b>{code}</b>——친구가 참가하기를 기다리는 중…<br>코드를 보내거나 아래 복사 버튼을 사용하세요.",
+connLobbyWaiting:"로비（{slot}번 슬롯）——상대가 참가하기를 기다리는 중…",
+connOnlineBlack:"온라인 대국——당신은 <b>흑</b>입니다.",
+connRematchSwap:"온라인 대국——재대결! 색상을 바꿨습니다.",
+connConnectedHost:"<b>연결됨!</b> 친구가 참가했습니다. 당신은 백입니다.",
+connConnectedGuest:"<b>연결됨!</b> 참가했습니다. 당신은 흑입니다.",
+connDisconnected:"<b>상대가 연결을 끊었습니다.</b> 보드를 계속 보거나, 메뉴로 돌아가 새 대국을 시작할 수 있습니다.",
+menuPeerJSMissing:"멀티플레이어 라이브러리（PeerJS）를 불러올 수 없습니다. 연결을 확인하고 다시 시도하세요——봇과 로컬 플레이는 계속 사용할 수 있습니다.",
+menuPeerJSMissingShort:"멀티플레이어 라이브러리（PeerJS）를 불러올 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+menuCreatingRoom:"방 {code} 만드는 중…",
+menuRoomLive:"방 {code}이 열렸습니다——친구에게 코드를 보내세요.",
+menuJoining:"방 {code}에 참가하는 중…",
+menuTypeCode:"먼저 방 코드를 입력하세요.",
+menuJoined:"방 {code}에 참가했습니다! 보드를 기다리는 중…",
+menuStillTrying:"방 {code}에 계속 연결을 시도하는 중입니다——코드가 맞나요? 친구의 방이 아직 열려 있나요?",
+menuCouldNotCreate:"방을 만들 수 없습니다（{err}）. 다시 시도하세요.",
+menuCouldNotJoin:"방 {code}에 참가할 수 없습니다（{err}）. 코드를 확인하세요.",
+menuLooking:"상대를 찾는 중…",
+menuWaitingOpp:"상대를 기다리는 중…（로비 {slot}번 슬롯）",
+menuOppFound:"상대를 찾았습니다——행운을 빕니다!",
+menuSlotsBusy:"지금 로비 슬롯이 모두 찼습니다——몇 초 후에 다시 시도하거나 방을 만드세요.",
+menuRematchWaiting:"재대결을 요청했습니다——방장을 기다리는 중…",
+menuDeepLink:"방 {code}을(를) 감지했습니다——「방 참가」를 눌러 입장하세요.",
+copyPrompt:"방 링크를 복사하세요:",
+copyShareText:"Cavalaria 방 {code}——함께해요: {link}"
+}
+};
+let lang='en';
+let connState=null;   // {key,params} or {key:null,text} — re-rendered on language switch
+let menuMsgState=null; // same shape, for the menu message line
+let copyFlash=false;  // true while the copy button briefly shows "Copied!"
+/* t(key, params): English fallback for any missing key. A param value
+   starting with '@' is itself a key (e.g. {level:'@botMedium'}), so a
+   stored conn/menu state re-translates when the language changes. */
+function t(key,params){
+  let s=(I18N[lang]&&I18N[lang][key])||I18N.en[key]||key;
+  if(params) for(const k in params){ let v=params[k]; if(typeof v==='string'&&v.charAt(0)==='@') v=t(v.slice(1)); s=s.split('{'+k+'}').join(v); }
+  return s;
+}
+function detectLang(){
+  try{ const s=localStorage.getItem('lang'); if(s&&I18N[s]) return s; }catch(e){}
+  try{ const n=(navigator.language||'en').toLowerCase(); const base=n.split('-')[0]; if(I18N[base]) return base; }catch(e){}
+  return 'en';
+}
+function renderConn(){
+  if(!connState) return;
+  try{ const el=$('connBox'); if(el) el.innerHTML=connState.key?t(connState.key,connState.params):(connState.text||''); }catch(e){}
+}
+function renderMenuMsg(){
+  if(!menuMsgState) return;
+  try{ const el=$('menuMsg'); if(el) el.textContent=menuMsgState.key?t(menuMsgState.key,menuMsgState.params):(menuMsgState.text||''); }catch(e){}
+}
+function setConnKey(key,params){ connState={key:key,params:params||null}; renderConn(); }
+function setConnText(txt){ connState={key:null,text:txt}; renderConn(); }
+function setMenuMsgKey(key,params){ menuMsgState={key:key,params:params||null}; renderMenuMsg(); }
+function setMenuMsg(txt){ menuMsgState={key:null,text:txt||''}; renderMenuMsg(); }
+/* Engine reason / pass-note strings stay English in the shared game
+   state (they sync between clients); translate them at render time. */
+function translateReason(reason){
+  if(!reason) return '';
+  if(reason==='No pieces left on either side. Draw!') return t('reasonNoPiecesBoth');
+  if(reason==='White has no pieces left. Black wins!') return t('reasonWhiteOut');
+  if(reason==='Black has no pieces left. White wins!') return t('reasonBlackOut');
+  if(reason==='Neither side has a move — draw.') return t('reasonNoMoves');
+  const m=reason.match(/^(White|Black) resigned\.$/);
+  if(m) return t('reasonResigned',{color:t(m[1]==='White'?'colorWhite':'colorBlack')});
+  return reason;
+}
+function translatePassNote(note){
+  if(!note) return '';
+  const m=note.match(/^(White|Black) has no moves — turn passes to (White|Black)\.$/);
+  if(m) return t('passNote',{color:t(m[1]==='White'?'colorWhite':'colorBlack'),other:t(m[2]==='White'?'colorWhite':'colorBlack')});
+  return note;
+}
+function applyI18n(){
+  try{
+    if(document.querySelectorAll){
+      document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.getAttribute('data-i18n'); if(k) el.textContent=t(k); });
+      document.querySelectorAll('[data-i18n-html]').forEach(el=>{ const k=el.getAttribute('data-i18n-html'); if(k) el.innerHTML=t(k); });
+      document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ const k=el.getAttribute('data-i18n-ph'); if(k) el.placeholder=t(k); });
+    }
+  }catch(e){}
+  try{ document.title=t('pageTitle'); }catch(e){}
+  try{ const b=$('btnSound'); if(b) b.textContent=t(soundOn?'btnSoundOn':'btnSoundOff'); }catch(e){}
+  try{ if(!copyFlash){ const c=$('btnCopy'); if(c) c.textContent=t('btnCopy'); } }catch(e){}
+  try{ renderConn(); }catch(e){}
+  try{ renderMenuMsg(); }catch(e){}
+  try{ pickMode(mode); }catch(e){}
+}
+function setLang(l){
+  if(!I18N[l]) l='en';
+  lang=l;
+  try{ localStorage.setItem('lang',l); }catch(e){}
+  try{ if(document.documentElement) document.documentElement.lang=l; }catch(e){}
+  try{ const sel=$('langSelect'); if(sel) sel.value=l; }catch(e){}
+  applyI18n();
+  if(state) render();
+}
+/* ================= end i18n ================= */
 const PIECE_W="data:image/png;base64,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";
 const PIECE_B="data:image/png;base64,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";
 let mode='main';
@@ -526,7 +1548,7 @@ const EMP_GLYPH={R:'♜',B:'♝'};
 
 function beep(freq,dur){ if(!soundOn) return; try{ const ctx=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=freq; o.type='sine'; g.gain.value=0.06; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur); o.stop(ctx.currentTime+dur); }catch(e){} }
 function show(id,on){ $(id).classList.toggle('hidden',!on); }
-function setMenuMsg(t){ $('menuMsg').textContent=t||''; }
+
 
 /* ---- mode picker ---- */
 function setupOptsFromUI(){
@@ -545,7 +1567,7 @@ function pickMode(m){
   show('randomNote',m==='random');
   const bs=parseInt(($('boardSize').value||'8'),10)||8;
   const ranks=bs===12?'6–7':'4–5';
-  $('riverNote').textContent=m==='random'?('Random river: one square per file, ranks '+ranks+', always connected.'):('Fixed river across ranks '+ranks+', one square per file.');
+  $('riverNote').textContent=m==='random'?t('riverNoteRandom',{ranks}):t('riverNoteFixed',{ranks});
 }
 $('modeChoose').onclick=()=>pickMode('choose');
 $('modeMain').onclick=()=>pickMode('main');
@@ -621,19 +1643,19 @@ function boardOverlaySVG(){
       };
       const bank=(side)=>{
         const along=(rnd(side*3+1)-0.5)*cell*0.55, out=cell*(0.44+rnd(side*3+2)*0.07);
-        if(rnd(side*3+3)<0.82) s+=tuft(cx+side*px*out+tx*along, cy+side*py*out+ty*along, side*px, side*py, 0.75+rnd(side*3+4)*0.6);
-        if(rnd(side*3+5)<0.35) s+=tuft(cx+side*px*(out+cell*0.05)+tx*(along+cell*(0.2+rnd(side*3+6)*0.2)), cy+side*py*(out+cell*0.05)+ty*(along+cell*(0.2+rnd(side*3+6)*0.2)), side*px, side*py, 0.6+rnd(side*3+7)*0.4);
+        if(rnd(side*3+3)<0.45) s+=tuft(cx+side*px*out+tx*along, cy+side*py*out+ty*along, side*px, side*py, 0.75+rnd(side*3+4)*0.6);
+        if(rnd(side*3+5)<0.15) s+=tuft(cx+side*px*(out+cell*0.05)+tx*(along+cell*(0.2+rnd(side*3+6)*0.2)), cy+side*py*(out+cell*0.05)+ty*(along+cell*(0.2+rnd(side*3+6)*0.2)), side*px, side*py, 0.6+rnd(side*3+7)*0.4);
       };
       bank(1); bank(-1);
       if(rnd(20)<0.62){
         const wx=cx+tx*(rnd(21)-0.5)*cell*0.55+px*(rnd(22)-0.5)*cell*0.25, wy=cy+ty*(rnd(21)-0.5)*cell*0.55+py*(rnd(22)-0.5)*cell*0.25;
         s+='<g transform="translate('+f2(wx)+' '+f2(wy)+') rotate('+f2(ang+(rnd(23)-0.5)*40)+') scale('+f2(0.8+rnd(24)*0.5)+')" stroke="rgba(255,255,255,0.55)" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M-3 0 Q -1.5 -1.2 0 0 Q 1.5 1.2 3 0"/></g>';
       }
-      if(rnd(30)<0.62){
+      if(rnd(30)<0.30){
         const sx=cx+px*(rnd(31)-0.5)*cell*0.3+tx*(rnd(32)-0.5)*cell*0.4, sy=cy+py*(rnd(31)-0.5)*cell*0.3+ty*(rnd(32)-0.5)*cell*0.4;
         const sc1=0.7+rnd(33)*0.6;
         s+='<g transform="translate('+f2(sx)+' '+f2(sy)+') rotate('+f2(ang+18+(rnd(34)-0.5)*30)+') scale('+f2(sc1)+')" stroke="#2e7d4f" stroke-width="0.8" stroke-linecap="round" fill="none"><path d="M0 0 Q 1 -1.5 0 -3 Q -1 -4.5 0 -6"/></g>';
-        if(rnd(35)<0.45) s+='<g transform="translate('+f2(sx+1.6)+' '+f2(sy+1.2)+') rotate('+f2(ang-14+(rnd(36)-0.5)*30)+') scale('+f2(0.6+rnd(37)*0.5)+')" stroke="#2e7d4f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q 0.8 -1.2 0 -2.4 Q -0.8 -3.6 0 -4.6"/></g>';
+        if(rnd(35)<0.25) s+='<g transform="translate('+f2(sx+1.6)+' '+f2(sy+1.2)+') rotate('+f2(ang-14+(rnd(36)-0.5)*30)+') scale('+f2(0.6+rnd(37)*0.5)+')" stroke="#2e7d4f" stroke-width="0.7" stroke-linecap="round" fill="none"><path d="M0 0 Q 0.8 -1.2 0 -2.4 Q -0.8 -3.6 0 -4.6"/></g>';
       }
     }
   }
@@ -669,26 +1691,26 @@ function render(){
   if(riverOverlay) riverOverlay.innerHTML='<svg viewBox="0 0 100 100">'+boardOverlaySVG()+'</svg>';
   // status
   const wn=countPieces(state.board,'w'), bn=countPieces(state.board,'b');
-  const turnName=state.turn==='w'?'White':'Black';
+  const turnName=t(state.turn==='w'?'colorWhite':'colorBlack');
   if(state.over){
-    $('statusBox').innerHTML=(state.winner?(state.winner==='w'?'♘ White wins!':'♞ Black wins!'):'🤝 Draw')+'<small>'+state.reason+'</small>';
+    $('statusBox').innerHTML=(state.winner?t(state.winner==='w'?'winWhite':'winBlack'):t('draw'))+'<small>'+translateReason(state.reason)+'</small>';
   } else if(state.pendingEmpower){
-    const who=state.pendingEmpower==='w'?'White':'Black';
-    $('statusBox').innerHTML=who+' — last unit standing!<small>'+(humanControls(state.pendingEmpower)?'Choose its extra power: Rook or Bishop.':(playMode==='bot'?'The bot is choosing its extra power…':'Waiting for '+who.toLowerCase()+' to choose its extra power…'))+(state.passNote?'<br>'+state.passNote:'')+'</small>';
+    const who=t(state.pendingEmpower==='w'?'colorWhite':'colorBlack');
+    $('statusBox').innerHTML=t('statusLastUnit',{color:who})+'<small>'+(humanControls(state.pendingEmpower)?t('subChoosePower'):(playMode==='bot'?t('subBotChoosing'):t('subWaitingChoose',{color:who})))+(state.passNote?'<br>'+translatePassNote(state.passNote):'')+'</small>';
   } else {
-    $('statusBox').innerHTML=turnName+' to move<small>'+(playMode==='online'?(myColor===state.turn?'Your move.':'Waiting for opponent…'):(playMode==='bot'?(state.turn==='b'?'Bot is thinking…':'Your move.'):''))+(state.passNote?'<br>'+state.passNote:'')+'</small>';
+    $('statusBox').innerHTML=t('statusToMove',{color:turnName})+'<small>'+(playMode==='online'?(myColor===state.turn?t('statusYourMove'):t('statusWaitingOpp')):(playMode==='bot'?(state.turn==='b'?t('statusBotThinking'):t('statusYourMove')):''))+(state.passNote?'<br>'+translatePassNote(state.passNote):'')+'</small>';
   }
-  const modeLabel=state.mode==='choose'?'Choose Formations':state.mode==='main'?'Mongol vs Roman':'Random';
-  $('pillsBox').innerHTML='<span class="pill'+(wn===0?' dead':'')+'">♘ White: '+wn+' • '+FORMATIONS[state.size][state.whiteFormation].name+'</span><span class="pill'+(bn===0?' dead':'')+'">♞ Black: '+bn+' • '+FORMATIONS[state.size][state.blackFormation].name+'</span><span class="pill">'+state.size+'×'+state.size+'</span><span class="pill">Seed '+state.seed+'</span><span class="pill">'+modeLabel+'</span><span class="pill">River '+(state.river&&state.river.length?'on':'off')+'</span>';
+  const modeLabel=t(state.mode==='choose'?'modeChoose':state.mode==='main'?'modeMain':'modeRandom');
+  $('pillsBox').innerHTML='<span class="pill'+(wn===0?' dead':'')+'">'+t('pillWhite',{n:wn,formation:FORMATIONS[state.size][state.whiteFormation].name})+'</span><span class="pill'+(bn===0?' dead':'')+'">'+t('pillBlack',{n:bn,formation:FORMATIONS[state.size][state.blackFormation].name})+'</span><span class="pill">'+state.size+'×'+state.size+'</span><span class="pill">'+t('seed',{seed:state.seed})+'</span><span class="pill">'+modeLabel+'</span><span class="pill">'+t(state.river&&state.river.length?'pillRiverOn':'pillRiverOff')+'</span>';
   let capW=0, capB=0;
   for(const h of state.history){ if(h.captured){ if(h.color==='w') capW++; else capB++; } }
-  $('capWhite').textContent='♘ White took: '+(capW?('♞ × '+capW):'—');
-  $('capBlack').textContent='♞ Black took: '+(capB?('♘ × '+capB):'—');
+  $('capWhite').textContent=t('capWhiteTook',{x:capW?('♞ × '+capW):'—'});
+  $('capBlack').textContent=t('capBlackTook',{x:capB?('♘ × '+capB):'—'});
   $('movesBox').innerHTML=state.history.length?state.history.map((h,i)=>{
-    if(h.empower) return '<b>★ '+(h.color==='w'?'White':'Black')+' last unit gains '+(h.empower==='R'?'Rook ♜':'Bishop ♝')+'</b>';
+    if(h.empower) return '<b>'+t('moveEmpower',{color:t(h.color==='w'?'colorWhite':'colorBlack'),piece:t(h.empower==='R'?'pieceRook':'pieceBishop'),glyph:h.empower==='R'?'♜':'♝'})+'</b>';
     const n=Math.floor(i/2)+1, pre=(i%2===0)?(n+'. '):'';
     return pre+'<b>C</b> '+sqName(h.from,state.size)+(h.captured?'x':'–')+sqName(h.to,state.size)+(h.double?' (2)':'');
-  }).join(' &nbsp; '):'No moves yet — the formations are set, now you ride.';
+  }).join(' &nbsp; '):t('movesEmpty');
   if(state.over) showOver();
   showEmpowerModalIfNeeded();
 }
@@ -700,14 +1722,14 @@ function humanControls(color){
 function showEmpowerModalIfNeeded(){
   if(!state) { show('empowerModal',false); return; }
   if(state.pendingEmpower&&humanControls(state.pendingEmpower)){
-    $('empowerText').textContent=(state.pendingEmpower==='w'?'White':'Black')+' — your last Cavalaria earns an extra power. Choose one — it keeps its knight and pawn moves too.';
+    $('empowerText').textContent=t('empowerText',{color:t(state.pendingEmpower==='w'?'colorWhite':'colorBlack')});
     show('empowerModal',true);
   } else show('empowerModal',false);
 }
 function showOver(){
   if(!state||!state.over) return;
-  $('overTitle').textContent=state.winner?(state.winner==='w'?'♘ White wins!':'♞ Black wins!'):'🤝 Draw';
-  $('overReason').textContent=state.reason;
+  $('overTitle').textContent=state.winner?t(state.winner==='w'?'winWhite':'winBlack'):t('draw');
+  $('overReason').textContent=translateReason(state.reason);
   show('overModal',true);
 }
 function hideOver(){ show('overModal',false); }
@@ -775,7 +1797,9 @@ function startGame(m,seed,opts){
   show('menuScreen',false); show('gameScreen',true);
   $('roomBox').classList.toggle('hidden',!roomCode);
   if(roomCode) $('roomCodeText').textContent=roomCode;
-  $('connBox').innerHTML=opts.connText||(playMode==='online'?'Online game':'Local game');
+  if(opts.connKey) setConnKey(opts.connKey,opts.connParams);
+  else if(opts.connText) setConnText(opts.connText);
+  else setConnKey(playMode==='online'?'connOnline':'connLocal');
   render();
   if(state.over) beep(220,0.3);
 }
@@ -790,19 +1814,19 @@ function backToMenu(){
 $('btnMenu').onclick=backToMenu;
 $('btnOverMenu').onclick=backToMenu;
 $('btnFlip').onclick=()=>{ flipped=!flipped; render(); };
-$('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=soundOn?'🔊 Sound on':'🔇 Sound off'; };
+$('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=t(soundOn?'btnSoundOn':'btnSoundOff'); };
 $('btnCopy').onclick=async()=>{
   const link=location.origin+location.pathname+'?room='+roomCode;
-  const txt='Cavalaria room '+roomCode+' — join me: '+link;
-  try{ await navigator.clipboard.writeText(txt); $('btnCopy').textContent='Copied!'; setTimeout(()=>$('btnCopy').textContent='Copy code / link',1500); }
-  catch(e){ prompt('Copy your room link:',txt); }
+  const txt=t('copyShareText',{code:roomCode,link});
+  try{ await navigator.clipboard.writeText(txt); copyFlash=true; $('btnCopy').textContent=t('copied'); setTimeout(()=>{ copyFlash=false; $('btnCopy').textContent=t('btnCopy'); },1500); }
+  catch(e){ prompt(t('copyPrompt'),txt); }
 };
 function startChosen(play,extra){
   const so=setupOptsFromUI(); currentSetupOpts=so;
   startGame(mode,randomSeed(),Object.assign({playMode:play,setupOpts:so},extra||{}));
 }
-$('btnLocal').onclick=()=>startChosen('local',{connText:'Local 2-player — same screen, pass &amp; play.'});
-$('btnBot').onclick=()=>startChosen('bot',{myColor:'w',connText:'You (White) vs Bot ('+botLevel+'). Bot plays Black.'});
+$('btnLocal').onclick=()=>startChosen('local',{connKey:'connLocal2p'});
+$('btnBot').onclick=()=>startChosen('bot',{myColor:'w',connKey:'connBot',connParams:{level:botLevel==='easy'?'@botEasy':'@botMedium'}});
 $('btnRematch').onclick=()=>requestRematch();
 $('btnOverRematch').onclick=()=>{ hideOver(); requestRematch(); };
 $('btnResign').onclick=()=>{
@@ -817,11 +1841,11 @@ function requestRematch(){
   if(playMode==='online'&&conn&&conn.open){
     if(isHost){ const seed=randomSeed(); const nc=myColor==='w'?'b':'w'; myColor=nc;
       send({t:'rematch',mode:m,seed,setupOpts:so,guestColor:opp(nc)});
-      startGame(m,seed,{playMode:'online',myColor:nc,isHost:true,roomCode,setupOpts:so,connText:'Online game — rematch! Colours swapped.'});
-    } else { send({t:'rematch-request',mode:m}); setMenuMsg('Rematch requested — waiting for host…'); }
+      startGame(m,seed,{playMode:'online',myColor:nc,isHost:true,roomCode,setupOpts:so,connKey:'connRematchSwap'});
+    } else { send({t:'rematch-request',mode:m}); setMenuMsgKey('menuRematchWaiting'); }
     return;
   }
-  startGame(m,randomSeed(),{playMode,myColor:playMode==='bot'?'w':null,setupOpts:so,connText:playMode==='bot'?'You (White) vs Bot.':'Local 2-player — new setup!'});
+  startGame(m,randomSeed(),{playMode,myColor:playMode==='bot'?'w':null,setupOpts:so,connKey:playMode==='bot'?'connBotRematch':'connLocalRematch'});
 }
 
 /* ---- multiplayer (PeerJS) ---- */
@@ -869,7 +1893,7 @@ function adoptState(s){
 }
 function startFromState(s){
   currentSetupOpts={whiteFormation:s.whiteFormation,blackFormation:s.blackFormation,riverMode:s.river.length?'fixed':'off',boardSize:s.size||8};
-  startGame(s.mode,s.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,setupOpts:currentSetupOpts,connText:'Online game — you are <b>Black</b>.'});
+  startGame(s.mode,s.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,setupOpts:currentSetupOpts,connKey:'connOnlineBlack'});
   state=deserializeState(s);
   stateReceived=true; send({t:'ack',n:state.history.length}); render();
 }
@@ -891,10 +1915,10 @@ function stopHelloLoop(){ clearInterval(helloTimer); helloTimer=null; }
 function attachConn(c,asHost){
   conn=c;
   c.on('data',msg=>handleMsg(msg,asHost));
-  c.on('close',()=>{ stopHeartbeat(); stopHelloLoop(); if(state&&!state.over){ $('connBox').innerHTML='<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.'; } });
+  c.on('close',()=>{ stopHeartbeat(); stopHelloLoop(); if(state&&!state.over){ setConnKey('connDisconnected'); } });
   c.on('error',()=>{});
   c.on('open',()=>{
-    $('connBox').innerHTML='<b>Connected!</b> '+(asHost?'Your friend joined. You are White.':'You joined. You are Black.');
+    setConnKey(asHost?'connConnectedHost':'connConnectedGuest');
     if(asHost){ sendState(); }                 // full state, ack-tracked — guest adopts it
     else { stateReceived=false; startHelloLoop(); } // keep asking until the board arrives
   });
@@ -918,52 +1942,52 @@ function handleMsg(msg,asHost){
   else if(msg.t==='resign'){
     state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
   } else if(msg.t==='rematch'){
-    startGame(msg.mode,msg.seed,{playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,setupOpts:msg.setupOpts,connText:'Online game — rematch! Colours swapped.'});
+    startGame(msg.mode,msg.seed,{playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,setupOpts:msg.setupOpts,connKey:'connRematchSwap'});
   } else if(msg.t==='rematch-request'&&asHost){
     requestRematch();
   }
 }
 $('btnCreate').onclick=()=>{
-  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.'); return; }
+  if(typeof Peer==='undefined'){ setMenuMsgKey('menuPeerJSMissing'); return; }
   const code=makeCode(); roomCode=code;
-  setMenuMsg('Creating room '+code+'…');
+  setMenuMsgKey('menuCreatingRoom',{code});
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=new Peer(peerIdFor(code));
   peer.on('open',()=>{
-    setMenuMsg('Room '+code+' is live — send the code to your friend.');
-    startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:code,setupOpts:setupOptsFromUI(),connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'});
+    setMenuMsgKey('menuRoomLive',{code});
+    startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:code,setupOpts:setupOptsFromUI(),connKey:'connRoomWaiting',connParams:{code}});
     waitingForGuest=true;
   });
   peer.on('connection',c=>{ waitingForGuest=false; attachConn(c,true); });
-  peer.on('error',err=>{ setMenuMsg('Could not create the room ('+(err&&err.type||'error')+'). Try again.'); });
+  peer.on('error',err=>{ setMenuMsgKey('menuCouldNotCreate',{err:(err&&err.type)||'error'}); });
 };
 $('btnJoin').onclick=()=>{
   const code=($('joinCode').value||'').trim().toUpperCase();
-  if(!code){ setMenuMsg('Type a room code first.'); return; }
+  if(!code){ setMenuMsgKey('menuTypeCode'); return; }
   joinRoom(code);
 };
 function joinRoom(code){
-  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
-  roomCode=code; setMenuMsg('Joining room '+code+'…');
+  if(typeof Peer==='undefined'){ setMenuMsgKey('menuPeerJSMissingShort'); return; }
+  roomCode=code; setMenuMsgKey('menuJoining',{code});
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=new Peer();
   peer.on('open',()=>{
     const c=peer.connect(peerIdFor(code),{reliable:true});
     attachConn(c,false);
-    c.on('open',()=>{ setMenuMsg('Joined room '+code+'! Waiting for the board…'); });
-    setTimeout(()=>{ if(!conn||!conn.open) setMenuMsg('Still trying to reach room '+code+' — is the code right, and is your friend\'s room still open?'); },6000);
+    c.on('open',()=>{ setMenuMsgKey('menuJoined',{code}); });
+    setTimeout(()=>{ if(!conn||!conn.open) setMenuMsgKey('menuStillTrying',{code}); },6000);
   });
-  peer.on('error',err=>{ setMenuMsg('Could not join room '+code+' ('+(err&&err.type||'error')+'). Double-check the code.'); });
+  peer.on('error',err=>{ setMenuMsgKey('menuCouldNotJoin',{code,err:(err&&err.type)||'error'}); });
 }
 /* Play Anyone: claim a lobby slot, or join the stranger waiting in one. */
 $('btnAnyone').onclick=async()=>{
-  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
-  setMenuMsg('Looking for an opponent…');
+  if(typeof Peer==='undefined'){ setMenuMsgKey('menuPeerJSMissingShort'); return; }
+  setMenuMsgKey('menuLooking');
   for(let slot=1;slot<=5;slot++){
     const res=await tryLobbySlot(slot);
     if(res==='wait'||res==='joined') return;
   }
-  setMenuMsg('All lobby slots are busy right now — try again in a few seconds, or create a room instead.');
+  setMenuMsgKey('menuSlotsBusy');
 };
 function tryLobbySlot(slot){
   return new Promise(resolve=>{
@@ -975,9 +1999,9 @@ function tryLobbySlot(slot){
     const timer=setTimeout(()=>{ try{p.destroy();}catch(e){} finish('next'); },4000);
     p.on('open',()=>{
       clearTimeout(timer); peer=p; isHost=true; roomCode=null;
-      startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:null,setupOpts:setupOptsFromUI(),connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'});
-      setMenuMsg('Waiting for an opponent… (lobby slot '+slot+')');
-      p.on('connection',c=>{ attachConn(c,true); setMenuMsg('Opponent found — good luck!'); });
+      startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:null,setupOpts:setupOptsFromUI(),connKey:'connLobbyWaiting',connParams:{slot}});
+      setMenuMsgKey('menuWaitingOpp',{slot});
+      p.on('connection',c=>{ attachConn(c,true); setMenuMsgKey('menuOppFound'); });
       finish('wait');
     });
     p.on('error',err=>{
@@ -990,7 +2014,7 @@ function tryLobbySlot(slot){
           peer=p2; roomCode=null;
           const c=p2.connect(id,{reliable:true});
           attachConn(c,false);
-          c.on('open',()=>{ clearTimeout(t2); if(!done2){ done2=true; setMenuMsg('Opponent found — good luck!'); finish('joined'); } });
+          c.on('open',()=>{ clearTimeout(t2); if(!done2){ done2=true; setMenuMsgKey('menuOppFound'); finish('joined'); } });
           c.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
         });
         p2.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
@@ -1003,9 +2027,45 @@ function tryLobbySlot(slot){
   try{
     const q=new URLSearchParams(location.search);
     const room=(q.get('room')||'').trim().toUpperCase();
-    if(room){ $('joinCode').value=room; setMenuMsg('Room '+room+' detected — press Join room to enter.'); }
+    if(room){ $('joinCode').value=room; setMenuMsgKey('menuDeepLink',{code:room}); }
   }catch(e){}
 })();
+/* ---- formation diagrams in the rules: real mini-boards, not ASCII ----
+   Same light/dark squares and piece art as the game board, built from the
+   same FORMATIONS / FIXED_RIVER data, so the pictures can never drift from
+   the rules. Pieces are white — the shape is the point, not the side.
+   Displayed top row = the formation's farthest rank, home rank at bottom. */
+function miniCell(boardRow,c,piece,water){
+  const d=document.createElement('div');
+  d.className='mcell '+(((boardRow+c)%2===0)?'light':'dark')+(water?' water':'');
+  if(water){ d.textContent='~'; return d; }
+  if(piece){ const im=document.createElement('img'); im.src=PIECE_W; im.alt=''; d.appendChild(im); }
+  return d;
+}
+function renderMiniBoards(){
+  const build=(id,size,rowCount,topBoardRow,rows,river)=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML='';
+    el.style.gridTemplateColumns='repeat('+size+',auto)';
+    if(size===12) el.classList.add('size12');
+    for(let r=0;r<rowCount;r++) for(let c=0;c<size;c++){
+      const boardRow=topBoardRow+r;
+      const water=river?river.has(boardRow*size+c):false;
+      const piece=rows?rows[rowCount-1-r][c]===1:false;
+      el.appendChild(miniCell(boardRow,c,piece,water));
+    }
+  };
+  build('miniRoman8',8,3,5,FORMATIONS[8].roman.rows,null);
+  build('miniMongolian8',8,3,5,FORMATIONS[8].mongolian.rows,null);
+  build('miniRiver8',8,2,3,null,new Set(FIXED_RIVER));
+  build('miniRoman12',12,4,8,FORMATIONS[12].roman.rows,null);
+  build('miniMongolian12',12,4,8,FORMATIONS[12].mongolian.rows,null);
+  build('miniRiver12',12,2,5,null,new Set(FIXED_RIVER_12));
+}
+renderMiniBoards();
+/* Language switcher: header select, visible on every screen. */
+$('langSelect').onchange=e=>setLang(e.target.value);
+setLang(detectLang());
 if(typeof module!=='undefined'&&module.exports){ /* engine exports live in the first script block */ }
 </script>
 </body>

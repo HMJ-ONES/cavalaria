@@ -1,5 +1,7 @@
 # 🐎 Cavalaria — Cavalry Chess
 
+**Current version: 1.8** — 7-language switcher (EN / PT / ES / ZH / JA / FR / KO) in the header, on every screen; choice saved in the browser.
+
 **A free browser chess variant where every piece is a cavalryman: a knight fused with a pawn, fighting over river terrain in real cavalry formations.**
 
 The piece art is Henrique's own PNGs: the outline version for white pieces, the solid black version for black pieces — a classic knight with a pawn riding diagonally on the back of its neck. The white background was made transparent (`tools/process_pieces.py`: flood-fill from the edges, so enclosed white — the outline piece's fill — stays opaque) and the PNGs are embedded in `index.html` as data URIs (`PIECE_W` / `PIECE_B`), because the GitHub push path is text-only and corrupts binary files. The artwork sources live as base64 text (`tools/src-white.jpg.b64`, `tools/src-black.jpg.b64`); re-run `python3 tools/process_pieces.py` to regenerate the pieces and re-embed them. `piece.svg` is the retired hand-drawn symbol, kept for reference only.
@@ -131,12 +133,15 @@ python3 -m http.server 8000
 # open http://localhost:8000/
 ```
 
-Tests (engine + sync, no browser needed):
+Tests (engine + sync + i18n, no browser needed):
 
 ```bash
-node test/engine.test.js   # 97 checks: formations (8x8 + 12x12), both example boards, river, pawn/knight moves, empowerment, win, bot games
+node test/engine.test.js   # 98 checks: formations (8x8 + 12x12), both example boards, river, pawn/knight moves, empowerment, win, bot games
 node test/sync.test.js     # 16 checks: two page copies over a fake network that drops messages (incl. a 12x12 game)
+node test/i18n.test.js     # 47 checks: every key in all 7 languages, switching changes menu + in-game text, choice persists, navigator.language detection, reason translation
 ```
+
+Languages: a `<select>` in the header (EN | PT | ES | ZH | JA | FR | KO), visible on the menu and in-game. Static text uses `data-i18n` attributes, dynamic strings go through `t()`; the choice is stored in `localStorage` under `lang`, else `navigator.language` is mapped to one of the 7, else English. Engine reason strings stay English in the synced game state and are translated at render time, so online play still syncs.
 
 ## Deploy to Cloudflare Pages ($0)
 
@@ -161,6 +166,7 @@ wrangler pages deploy . --project-name cavalaria
 index.html            the whole game (engine + UI + multiplayer), single file
 test/engine.test.js   engine unit tests (node)
 test/sync.test.js     multiplayer sync tests over a fake dropping network (node)
+test/i18n.test.js     7-language switcher tests (node, fake DOM)
 README.md             this file
 LICENSE               MIT
 wrangler.toml         Cloudflare Pages notes (Pages needs no config)
