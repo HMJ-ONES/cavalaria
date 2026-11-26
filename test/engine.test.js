@@ -229,6 +229,38 @@ console.log('No stalemate: a side with pieces always has a move:');
   check('passNote stays empty in normal play', (st.passNote || '') === '');
 }
 
+console.log('Voluntary pass (doPass):');
+{
+  // A pass flips the turn, is recorded in history, and notes itself.
+  const st = E.newGame('main', 1, { board: boardWith([[52, C('w')], [56, C('w')], [0, C('b')], [7, C('b')]]), river: [], turn: 'w' });
+  check('pass succeeds on your turn', E.doPass(st) === true);
+  check('pass flips the turn', st.turn === 'b');
+  check('pass is a history entry', st.history.length === 1 && st.history[0].pass === true && st.history[0].color === 'w');
+  check('pass sets the pass note', st.passNote === 'White passed.');
+  check('one pass does not end the game', !st.over);
+  // A real move after a pass resets the chain — no draw.
+  const mv = E.doMove(st, { from: 0, to: 8 });
+  check('opponent can still move after a pass', !!mv);
+  check('a real move resets consecPasses', st.consecPasses === 0);
+  check('no draw after pass + move', !st.over);
+  // Two passes in a row end the game as a draw.
+  const st2 = E.newGame('main', 1, { board: boardWith([[52, C('w')], [56, C('w')], [0, C('b')], [7, C('b')]]), river: [], turn: 'w' });
+  E.doPass(st2);
+  check('second pass in a row ends the game', E.doPass(st2) === true && st2.over);
+  check('two passes = draw, no winner', st2.winner === null && st2.reason === 'Both sides passed in a row — draw.');
+  check('pass history survives serialize/deserialize', (() => {
+    const s2 = E.deserializeState(E.serializeState(st2));
+    return s2.consecPasses === 2 && s2.history.length === 2 && s2.history[1].pass === true && s2.over;
+  })());
+  // No passing while an empowerment choice is pending, or after game over.
+  const stE = E.newGame('main', 1, { board: boardWith([[36, C('w')], [56, C('w')], [19, C('b')], [0, C('b')]]), river: [], turn: 'w' });
+  E.doMove(stE, { from: 36, to: 19 });
+  check('no pass while empowerment is pending', stE.pendingEmpower === 'b' && E.doPass(stE) === false);
+  const stW = E.newGame('main', 1, { board: boardWith([[36, C('w')], [56, C('w')], [19, C('b')]]), river: [], turn: 'w' });
+  E.doMove(stW, { from: 36, to: 19 });
+  check('no pass after the game is over', stW.over && E.doPass(stW) === false);
+}
+
 console.log('Full bot-vs-bot games terminate sensibly:');
 {
   let wins = 0, draws = 0, ongoing = 0, errors = 0, zeroMoveMid = 0;

@@ -100,7 +100,7 @@ When a side is down to its very last piece, its player picks an extra power for 
 
 - **Capture all of the other side's pieces.** There is no check and no checkmate — a piece under attack just dies if you don't save it.
 - There is no promotion and no en passant.
-- **No moves? Pass.** If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw. (In practice this never happens: knight moves connect the whole board, so a side with pieces on the board always has a move — the pass rule is kept as a guard and is covered by tests that verify no zero-move position ever appears in play.)
+- **Pass.** If a side has no legal move, the turn simply passes to the other side. You can also pass on purpose with the ⏭ Pass button (only on your turn) — but if both sides pass in a row, it's a draw, so the game can never stall on passing. (A forced pass almost never happens: knight moves connect the whole board, so a side with pieces on the board always has a move — the forced-pass rule is kept as a guard and is covered by tests that verify no zero-move position ever appears in play.)
 
 ## How to play
 
@@ -174,6 +174,7 @@ wrangler.toml         Cloudflare Pages notes (Pages needs no config)
 
 ## Versions
 
+- **v1.8.2** — flipped river fixed (the curve was sorted by board file while its edge extensions assumed screen order, so flipping doubled the river back on itself into a loop — now sorted by display file, and decorations are seeded by board square so they don't jump when flipping); ⏭ Pass button — pass voluntarily on your turn, two passes in a row are a draw; Portuguese river strings say "Rio ativo" instead of "Rio ligado".
 - **v1.8.1** — mode titles no longer show a literal `&nbsp;`: the translated strings now use a real non-breaking space (`\u00A0`), because the menu sets titles with `textContent`, which never parses HTML entities. A test pins it: no HTML entity may appear in any `data-i18n` string in any language.
 - **v1.8** — 7-language switcher (EN/PT/ES/ZH/JA/FR/KO) at the top of the page, choice remembered, browser language auto-detected; formation cards show mini pictures of the real board.
 

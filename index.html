@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.8.1 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
+<!-- Cavalaria v1.8.2 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -173,7 +173,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
       <li data-i18n-html="rule4"><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
       <li data-i18n-html="rule5"><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
       <li data-i18n-html="rule6"><b>White always moves first</b>, in every mode — even Random.</li>
-      <li data-i18n-html="rule7"><b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.</li>
+      <li data-i18n-html="rule7"><b>Pass.</b> If a side has no legal move, the turn simply passes to the other side. You can also pass on purpose with the ⏭ Pass button — but if both sides pass in a row, it's a draw.</li>
       <li data-i18n-html="rule8"><b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.</li>
       <li data-i18n-html="rule9"><b>Board size.</b> The 12×12 board ("Grand") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.</li>
       <li data-i18n-html="rule10"><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
@@ -197,6 +197,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
       <div class="row" style="justify-content:space-between">
         <button class="ghost small" id="btnFlip" type="button" data-i18n="btnFlip">⇅ Flip board</button>
         <button class="ghost small" id="btnSound" type="button" data-i18n="btnSoundOn">🔊 Sound on</button>
+        <button class="ghost small" id="btnPass" type="button" data-i18n="btnPass">⏭ Pass</button>
         <button class="ghost small" id="btnMenu" type="button" data-i18n="btnMenu">← Menu</button>
       </div>
     </div>
@@ -222,7 +223,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
   </div>
 </div>
 
-<footer data-i18n-html="footer"> Cavalaria v1.8.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer data-i18n-html="footer"> Cavalaria v1.8.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -397,8 +398,29 @@ function ensureTurnCanMove(st){
     st.over=true; st.winner=null; st.reason='Neither side has a move — draw.';
     return;
   }
+  // A forced pass counts toward the two-passes-in-a-row draw, exactly like
+  // a voluntary one (see doPass): two passes back to back end the game.
+  st.consecPasses=(st.consecPasses||0)+1;
+  if(st.consecPasses>=2){ st.over=true; st.winner=null; st.reason='Both sides passed in a row — draw.'; return; }
   st.passNote=(st.turn==='w'?'White':'Black')+' has no moves — turn passes to '+(st.turn==='w'?'Black':'White')+'.';
   st.turn=opp(st.turn);
+}
+// Voluntary pass (the ⏭ Pass button): give the turn to the other side.
+// Recorded in history like a move, so it syncs online the same way. Two
+// passes in a row — voluntary or forced — end the game as a draw, so the
+// game can never stall on passing forever. A real move resets the count.
+function doPass(st){
+  if(st.over||st.pendingEmpower) return false;
+  st.passNote='';
+  const color=st.turn;
+  st.history.push({pass:true,piece:'C',color});
+  if(color==='b') st.fullmove++;
+  st.consecPasses=(st.consecPasses||0)+1;
+  st.turn=opp(st.turn);
+  if(st.consecPasses>=2){ st.over=true; st.winner=null; st.reason='Both sides passed in a row — draw.'; return true; }
+  ensureTurnCanMove(st);
+  if(!st.over&&!st.passNote) st.passNote=(color==='w'?'White':'Black')+' passed.';
+  return true;
 }
 function checkEmpowerment(st){
   if(st.over) return;
@@ -424,7 +446,7 @@ function newGame(mode,seed,opts){
     const st={mode,seed,board:opts.board.map(p=>p?{c:p.c,empowered:p.empowered||null,hasMoved:!!p.hasMoved}:null),
       river:(opts.river||[]).slice(),whiteFormation:opts.whiteFormation||'mongolian',blackFormation:opts.blackFormation||'roman',
       turn:opts.turn||'w',size:opts.size||Math.round(Math.sqrt(opts.board.length)),
-      fullmove:1,over:false,winner:null,reason:'',history:[],passNote:'',pendingEmpower:null};
+      fullmove:1,over:false,winner:null,reason:'',history:[],passNote:'',pendingEmpower:null,consecPasses:0};
     const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
     if(!st.over){
       // a custom board may already have a lone unempowered piece on the
@@ -438,7 +460,7 @@ function newGame(mode,seed,opts){
   }
   const setup=genSetup(mode,seed,opts);
   const st={mode,seed,board:setup.board,river:setup.river,whiteFormation:setup.whiteFormation,blackFormation:setup.blackFormation,
-    turn:setup.turn,size:setup.size,fullmove:1,over:false,winner:null,reason:'',history:[],passNote:'',pendingEmpower:null};
+    turn:setup.turn,size:setup.size,fullmove:1,over:false,winner:null,reason:'',history:[],passNote:'',pendingEmpower:null,consecPasses:0};
   const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
   ensureTurnCanMove(st);
   return st;
@@ -449,6 +471,7 @@ function doMove(st,req){
   const legal=legalMoves(st);
   const m=legal.find(x=>x.from===req.from&&x.to===req.to);
   if(!m) return null;
+  st.consecPasses=0; // a real move breaks any pass chain
   const mv={from:m.from,to:m.to,double:!!m.double};
   const piece=st.board[mv.from];
   const res=applyMoveToBoard(st.board,mv);
@@ -492,9 +515,9 @@ function boardKey(st){
   let s=''; for(const p of st.board) s+=p?p.c+(p.empowered||'C')+(p.hasMoved?'m':''):'..';
   return s+st.turn+'|'+(st.size||8)+'|'+st.history.length+'|'+(st.river||[]).join(',');
 }
-function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,river:st.river,whiteFormation:st.whiteFormation,blackFormation:st.blackFormation,turn:st.turn,size:st.size||8,fullmove:st.fullmove,history:st.history,over:st.over,winner:st.winner,reason:st.reason,passNote:st.passNote||'',pendingEmpower:st.pendingEmpower||null}; }
-function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{c:p.c,empowered:p.empowered||null,hasMoved:!!p.hasMoved}:null); st.river=(s.river||[]).slice(); st.pendingEmpower=s.pendingEmpower||null; st.size=s.size||8; return st; }
-if(typeof module!=='undefined'&&module.exports){ module.exports={FORMATIONS,FIXED_RIVER,FIXED_RIVER_12,genSetup,placeFormation,firstTurnFor,countPieces,solePiece,riverConnected,isRiver,pseudoMoves,applyMoveToBoard,legalMoves,evaluate,ensureTurnCanMove,checkEmpowerment,resolveEmpower,newGame,doMove,botMove,botEmpowerChoice,serializeState,deserializeState,boardKey,mulberry32,sqName,opp}; }
+function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,river:st.river,whiteFormation:st.whiteFormation,blackFormation:st.blackFormation,turn:st.turn,size:st.size||8,fullmove:st.fullmove,history:st.history,over:st.over,winner:st.winner,reason:st.reason,passNote:st.passNote||'',pendingEmpower:st.pendingEmpower||null,consecPasses:st.consecPasses||0}; }
+function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{c:p.c,empowered:p.empowered||null,hasMoved:!!p.hasMoved}:null); st.river=(s.river||[]).slice(); st.pendingEmpower=s.pendingEmpower||null; st.size=s.size||8; st.consecPasses=s.consecPasses||0; return st; }
+if(typeof module!=='undefined'&&module.exports){ module.exports={FORMATIONS,FIXED_RIVER,FIXED_RIVER_12,genSetup,placeFormation,firstTurnFor,countPieces,solePiece,riverConnected,isRiver,pseudoMoves,applyMoveToBoard,legalMoves,evaluate,ensureTurnCanMove,checkEmpowerment,resolveEmpower,newGame,doMove,doPass,botMove,botEmpowerChoice,serializeState,deserializeState,boardKey,mulberry32,sqName,opp}; }
 </script>
 
 <script>
@@ -550,7 +573,7 @@ rule3:"<b>The river slows you down.</b> Entering a river square is a normal move
 rule4:"<b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.",
 rule5:"<b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.",
 rule6:"<b>White always moves first</b>, in every mode — even Random.",
-rule7:"<b>No moves? Pass.</b> If a side has no legal move, the turn simply passes to the other side. If neither side can move, it's a draw.",
+rule7:"<b>Pass.</b> If a side has no legal move, the turn simply passes to the other side. You can also pass on purpose with the ⏭ Pass button — but if both sides pass in a row, it's a draw.",
 rule8:"<b>Random river, honestly random.</b> One river square per file, on rank 4 or 5 — so the river is always one connected band across the board, never two squares stacked in the same file (that would trap a pawn trying to step out of the river). Files may share a rank.",
 rule9:"<b>Board size.</b> The 12×12 board (\"Grand\") plays by the same rules with <b>28 pieces a side in four ranks</b> and the river across ranks 6–7, one square per file. Pick the size above — it applies to every mode.",
 rule10:"<b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.",
@@ -559,6 +582,7 @@ lblRiver12:"River 12×12 (fixed)",
 capRiverFixed:"Ranks 5 and 4, one square per file.",
 capRiver12:"Ranks 7 and 6, one square per file.",
 btnFlip:"⇅ Flip board",
+btnPass:"⏭ Pass",
 btnSoundOn:"🔊 Sound on",
 btnSoundOff:"🔇 Sound off",
 btnMenu:"← Menu",
@@ -575,7 +599,7 @@ empowerRook:"<b>♜</b>Rook<br><small style=\"font-weight:500\">slides along ran
 empowerBishop:"<b>♝</b>Bishop<br><small style=\"font-weight:500\">slides along diagonals</small>",
 overRematch:"🐎 Rematch",
 overMenu:"Menu",
-footer:"Cavalaria v1.8.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
+footer:"Cavalaria v1.8.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
 statusToMove:"{color} to move",
 statusYourMove:"Your move.",
 statusWaitingOpp:"Waiting for opponent…",
@@ -591,8 +615,10 @@ reasonNoPiecesBoth:"No pieces left on either side. Draw!",
 reasonWhiteOut:"White has no pieces left. Black wins!",
 reasonBlackOut:"Black has no pieces left. White wins!",
 reasonNoMoves:"Neither side has a move — draw.",
+reasonPassDraw:"Both sides passed in a row — draw.",
 reasonResigned:"{color} resigned.",
 passNote:"{color} has no moves — turn passes to {other}.",
+passNoteVoluntary:"{color} passed.",
 pillWhite:"♘ White: {n} • {formation}",
 pillBlack:"♞ Black: {n} • {formation}",
 pillRiverOn:"River on",
@@ -605,6 +631,7 @@ capWhiteTook:"♘ White took: {x}",
 capBlackTook:"♞ Black took: {x}",
 movesEmpty:"No moves yet — the formations are set, now you ride.",
 moveEmpower:"★ {color} last unit gains {piece} {glyph}",
+movePass:"{color} passed",
 pieceRook:"Rook",
 pieceBishop:"Bishop",
 colorWhite:"White",
@@ -652,21 +679,21 @@ menuIntro:"Três formas de cavalgar. As formações decidem a abertura — o rio
 mode1Title:"1 \u00A0Escolher Formações",
 mode1Desc:"Escolha uma formação para cada lado e ligue ou desligue o rio. A batalha é sua, a formação também.",
 mode2Title:"2 \u00A0Principal — Mongol vs Romano",
-mode2Desc:"<b style=\"color:#fff\">As Brancas cavalgam em formação Mongol, as Pretas em formação Romana.</b> As Brancas jogam sempre primeiro. Rio ligado ou desligado, você decide.",
+mode2Desc:"<b style=\"color:#fff\">As Brancas cavalgam em formação Mongol, as Pretas em formação Romana.</b> As Brancas jogam sempre primeiro. Rio ativo ou inativo, você decide.",
 mode3Title:"3 \u00A0Aleatório",
-mode3Desc:"Cada lado é aleatoriamente Romano ou Mongol — você só vai saber qual é o seu quando o tabuleiro aparecer. O rio está sempre ligado, num formato aleatório.",
+mode3Desc:"Cada lado é aleatoriamente Romano ou Mongol — você só vai saber qual é o seu quando o tabuleiro aparecer. O rio está sempre ativo, num formato aleatório.",
 lblWhiteFormation:"Formação das Brancas",
 lblBlackFormation:"Formação das Pretas",
 lblRiver:"Rio",
-optRiverOn:"Rio ligado",
-optRiverOff:"Rio desligado",
+optRiverOn:"Rio ativo",
+optRiverOff:"Rio inativo",
 riverNoteFixed:"Rio fixo nas fileiras {ranks}, uma casa por coluna.",
 riverNoteRandom:"Rio aleatório: uma casa por coluna, nas fileiras {ranks}, sempre conectado.",
 lblBoardSize:"Tamanho do tabuleiro",
 optBoard8:"8 × 8 — Clássico (16 peças por lado)",
 optBoard12:"12 × 12 — Grande (28 peças por lado)",
 boardNote:"Vale para todos os modos e todas as formas de jogar. Entrar numa sala usa o tabuleiro do anfitrião.",
-randomNote:"Modo aleatório: as formações são sorteadas por lado (Romana ou Mongol cada), o rio está sempre ligado com um formato aleatório e conectado — uma casa por coluna, nunca duas na mesma coluna. As Brancas jogam sempre primeiro.",
+randomNote:"Modo aleatório: as formações são sorteadas por lado (Romana ou Mongol cada), o rio está sempre ativo com um formato aleatório e conectado — uma casa por coluna, nunca duas na mesma coluna. As Brancas jogam sempre primeiro.",
 lblName:"Seu nome",
 phName:"ex.: Alex",
 lblBot:"Robô",
@@ -685,7 +712,7 @@ rule3:"<b>O rio atrasa você.</b> Entrar numa casa de rio é um lance normal. <b
 rule4:"<b>A última unidade fica mais forte.</b> Quando um lado fica com apenas a sua última peça, o jogador escolhe um poder extra para ela: <b>♜ Torre</b> (desliza pelas fileiras e colunas) ou <b>♝ Bispo</b> (desliza pelas diagonais). Ela mantém os movimentos de cavalo e de peão.",
 rule5:"<b>As formações são cavalaria de verdade.</b> 16 peças por lado, em três fileiras. <b>Romana</b> — um bloco sólido, 8 + 6 + 2. <b>Mongol</b> — chifres bem abertos, 6 + 6 + 4.",
 rule6:"<b>As Brancas jogam sempre primeiro</b>, em todos os modos — até no Aleatório.",
-rule7:"<b>Sem lances? Passe a vez.</b> Se um lado não tem lance legal, a vez passa simplesmente para o outro lado. Se nenhum lado puder se mover, é empate.",
+rule7:"<b>Passe a vez.</b> Se um lado não tem lance legal, a vez passa simplesmente para o outro lado. Você também pode passar de propósito com o botão ⏭ Passar a vez — mas se os dois lados passarem seguidos, é empate.",
 rule8:"<b>Rio aleatório, honestamente aleatório.</b> Uma casa de rio por coluna, na fileira 4 ou 5 — assim o rio é sempre uma faixa contínua atravessando o tabuleiro, nunca duas casas empilhadas na mesma coluna (isso prenderia um peão tentando sair do rio). As colunas podem compartilhar a fileira.",
 rule9:"<b>Tamanho do tabuleiro.</b> O tabuleiro 12×12 (“Grande”) segue as mesmas regras com <b>28 peças por lado em quatro fileiras</b> e o rio nas fileiras 6–7, uma casa por coluna. Escolha o tamanho acima — ele vale para todos os modos.",
 rule10:"<b>Os lances sempre chegam.</b> Cada lance envia o tabuleiro inteiro, o outro lado confirma, e os dois lados comparam as notas a cada poucos segundos — se um lance se perder, os tabuleiros se consertam sozinhos.",
@@ -694,6 +721,7 @@ lblRiver12:"Rio 12×12 (fixo)",
 capRiverFixed:"Fileiras 5 e 4, uma casa por coluna.",
 capRiver12:"Fileiras 7 e 6, uma casa por coluna.",
 btnFlip:"⇅ Virar o tabuleiro",
+btnPass:"⏭ Passar a vez",
 btnSoundOn:"🔊 Som ligado",
 btnSoundOff:"🔇 Som desligado",
 btnMenu:"← Menu",
@@ -710,7 +738,7 @@ empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">desliza pelas f
 empowerBishop:"<b>♝</b>Bispo<br><small style=\"font-weight:500\">desliza pelas diagonais</small>",
 overRematch:"🐎 Revanche",
 overMenu:"Menu",
-footer:"Cavalaria v1.8.1 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
+footer:"Cavalaria v1.8.2 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
 statusToMove:"Vez das {color}",
 statusYourMove:"Sua vez.",
 statusWaitingOpp:"Aguardando o oponente…",
@@ -726,12 +754,14 @@ reasonNoPiecesBoth:"Não sobrou nenhuma peça de nenhum dos lados. Empate!",
 reasonWhiteOut:"As Brancas ficaram sem peças. Pretas vencem!",
 reasonBlackOut:"As Pretas ficaram sem peças. Brancas vencem!",
 reasonNoMoves:"Nenhum dos lados tem lance — empate.",
+reasonPassDraw:"Os dois lados passaram a vez seguida — empate.",
 reasonResigned:"{color} desistiram.",
 passNote:"{color} não têm lances — a vez passa para as {other}.",
+passNoteVoluntary:"{color} passaram a vez.",
 pillWhite:"♘ Brancas: {n} • {formation}",
 pillBlack:"♞ Pretas: {n} • {formation}",
-pillRiverOn:"Rio ligado",
-pillRiverOff:"Rio desligado",
+pillRiverOn:"Rio ativo",
+pillRiverOff:"Rio inativo",
 modeChoose:"Escolher Formações",
 modeMain:"Mongol vs Romano",
 modeRandom:"Aleatório",
@@ -740,6 +770,7 @@ capWhiteTook:"♘ Brancas capturaram: {x}",
 capBlackTook:"♞ Pretas capturaram: {x}",
 movesEmpty:"Nenhum lance ainda — as formações estão prontas, agora é cavalgar.",
 moveEmpower:"★ A última unidade das {color} ganha {piece} {glyph}",
+movePass:"{color} passaram a vez",
 pieceRook:"Torre",
 pieceBishop:"Bispo",
 colorWhite:"Brancas",
@@ -820,7 +851,7 @@ rule3:"<b>El río te frena.</b> Entrar en una casilla de río es un movimiento n
 rule4:"<b>La última unidad se hace más fuerte.</b> Cuando un bando se queda con su última pieza, su jugador elige un poder extra para ella: <b>♜ Torre</b> (se desliza por filas y columnas) o <b>♝ Alfil</b> (se desliza por diagonales). Conserva también sus movimientos de caballo y de peón.",
 rule5:"<b>Las formaciones son caballería de verdad.</b> 16 piezas por bando, en tres filas. <b>Romana</b> — un bloque sólido, 8 + 6 + 2. <b>Mongola</b> — cuernos bien abiertos, 6 + 6 + 4.",
 rule6:"<b>Las blancas mueven siempre primero</b>, en todos los modos — incluso en Aleatorio.",
-rule7:"<b>¿Sin movimientos? Pasa el turno.</b> Si un bando no tiene ningún movimiento legal, el turno pasa simplemente al otro bando. Si ningún bando puede mover, es empate.",
+rule7:"<b>Pasar el turno.</b> Si un bando no tiene ningún movimiento legal, el turno pasa simplemente al otro bando. También puedes pasar a propósito con el botón ⏭ Pasar — pero si ambos bandos pasan seguidos, es empate.",
 rule8:"<b>Río aleatorio, honestamente aleatorio.</b> Una casilla de río por columna, en la fila 4 o 5 — así el río es siempre una banda continua a través del tablero, nunca dos casillas apiladas en la misma columna (eso atraparía a un peón que intenta salir del río). Las columnas pueden compartir fila.",
 rule9:"<b>Tamaño del tablero.</b> El tablero de 12×12 («Grande») sigue las mismas reglas con <b>28 piezas por bando en cuatro filas</b> y el río en las filas 6–7, una casilla por columna. Elige el tamaño arriba — se aplica a todos los modos.",
 rule10:"<b>Los movimientos siempre llegan.</b> Cada movimiento envía el tablero completo, el otro lado lo confirma y ambos lados comparan sus notas cada pocos segundos — si alguna vez se pierde un movimiento, los tableros se reparan solos.",
@@ -829,6 +860,7 @@ lblRiver12:"Río 12×12 (fijo)",
 capRiverFixed:"Filas 5 y 4, una casilla por columna.",
 capRiver12:"Filas 7 y 6, una casilla por columna.",
 btnFlip:"⇅ Girar el tablero",
+btnPass:"⏭ Pasar",
 btnSoundOn:"🔊 Sonido activado",
 btnSoundOff:"🔇 Sonido desactivado",
 btnMenu:"← Menú",
@@ -845,7 +877,7 @@ empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">se desliza por 
 empowerBishop:"<b>♝</b>Alfil<br><small style=\"font-weight:500\">se desliza por diagonales</small>",
 overRematch:"🐎 Revancha",
 overMenu:"Menú",
-footer:"Cavalaria v1.8.1 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
+footer:"Cavalaria v1.8.2 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
 statusToMove:"Turno de las {color}",
 statusYourMove:"Tu turno.",
 statusWaitingOpp:"Esperando al oponente…",
@@ -861,8 +893,10 @@ reasonNoPiecesBoth:"No quedan piezas en ningún bando. ¡Empate!",
 reasonWhiteOut:"Las blancas se quedaron sin piezas. ¡Ganan las negras!",
 reasonBlackOut:"Las negras se quedaron sin piezas. ¡Ganan las blancas!",
 reasonNoMoves:"Ningún bando tiene movimientos — empate.",
+reasonPassDraw:"Ambos bandos pasaron seguidos — empate.",
 reasonResigned:"Las {color} se rindieron.",
 passNote:"Las {color} no tienen movimientos — el turno pasa a las {other}.",
+passNoteVoluntary:"Las {color} pasaron.",
 pillWhite:"♘ Blancas: {n} • {formation}",
 pillBlack:"♞ Negras: {n} • {formation}",
 pillRiverOn:"Río encendido",
@@ -875,6 +909,7 @@ capWhiteTook:"♘ Las blancas tomaron: {x}",
 capBlackTook:"♞ Las negras tomaron: {x}",
 movesEmpty:"Aún no hay movimientos — las formaciones están listas, ¡a cabalgar!",
 moveEmpower:"★ La última unidad de las {color} gana {piece} {glyph}",
+movePass:"Las {color} pasaron",
 pieceRook:"Torre",
 pieceBishop:"Alfil",
 colorWhite:"Blancas",
@@ -955,7 +990,7 @@ rule3:"<b>河流会拖慢你。</b>进入河格是正常的一步。<b>离开</b
 rule4:"<b>最后的棋子会变强。</b>当一方只剩下最后一枚棋子时，玩家可以为它选择一项额外能力：<b>♜ 车</b>（沿直线滑动）或 <b>♝ 象</b>（沿斜线滑动）。它同时保留骑士和兵的走法。",
 rule5:"<b>阵型是真正的骑兵阵型。</b>每方 16 枚棋子，分三排。<b>罗马</b>——密集方阵，8 + 6 + 2。<b>蒙古</b>——两翼张开，6 + 6 + 4。",
 rule6:"<b>白方永远先行</b>，所有模式都一样——随机模式也不例外。",
-rule7:"<b>无棋可走？跳过回合。</b>如果一方没有任何合法走法，回合直接交给对方。如果双方都无棋可走，则为和棋。",
+rule7:"<b>跳过回合。</b>如果一方没有任何合法走法，回合直接交给对方。你也可以用 ⏭ 跳过按钮主动跳过——但如果双方连续跳过，就是和棋。",
 rule8:"<b>随机河流，真正随机。</b>每列一个河格，位于第 4 或第 5 行——因此河流始终是横贯棋盘的一条连通水带，同一列绝不会出现上下叠放的两个河格（那样会困住试图出河的兵）。不同列可以共享同一行。",
 rule9:"<b>棋盘大小。</b>12×12 棋盘（“大棋盘”）规则相同，<b>每方 28 枚棋子，分四排</b>，河流位于第 6–7 行，每列一个河格。在上方选择大小——适用于所有模式。",
 rule10:"<b>走法总会送达。</b>每一步都会发送完整棋盘，对方确认收到，双方每隔几秒互相核对——如果某一步丢失了，棋盘会自行修复。",
@@ -964,6 +999,7 @@ lblRiver12:"河流 12×12（固定）",
 capRiverFixed:"第 5 行和第 4 行，每列一个河格。",
 capRiver12:"第 7 行和第 6 行，每列一个河格。",
 btnFlip:"⇅ 翻转棋盘",
+btnPass:"⏭ 跳过",
 btnSoundOn:"🔊 音效开",
 btnSoundOff:"🔇 音效关",
 btnMenu:"← 菜单",
@@ -980,7 +1016,7 @@ empowerRook:"<b>♜</b>车<br><small style=\"font-weight:500\">沿直线滑动</
 empowerBishop:"<b>♝</b>象<br><small style=\"font-weight:500\">沿斜线滑动</small>",
 overRematch:"🐎 再来一局",
 overMenu:"菜单",
-footer:"Cavalaria v1.8.1——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
+footer:"Cavalaria v1.8.2——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
 statusToMove:"{color}行棋",
 statusYourMove:"轮到你了。",
 statusWaitingOpp:"等待对手…",
@@ -996,8 +1032,10 @@ reasonNoPiecesBoth:"双方棋子都已吃完。和棋！",
 reasonWhiteOut:"白方没有棋子了。黑方获胜！",
 reasonBlackOut:"黑方没有棋子了。白方获胜！",
 reasonNoMoves:"双方都无棋可走——和棋。",
+reasonPassDraw:"双方连续跳过——和棋。",
 reasonResigned:"{color}认输。",
 passNote:"{color}无棋可走——回合交给{other}。",
+passNoteVoluntary:"{color}跳过了。",
 pillWhite:"♘ 白方：{n} • {formation}",
 pillBlack:"♞ 黑方：{n} • {formation}",
 pillRiverOn:"河流开启",
@@ -1010,6 +1048,7 @@ capWhiteTook:"♘ 白方吃子：{x}",
 capBlackTook:"♞ 黑方吃子：{x}",
 movesEmpty:"还没有棋步——阵型已就位，现在出发吧。",
 moveEmpower:"★ {color}的最后一枚棋子获得{piece} {glyph}",
+movePass:"{color}跳过",
 pieceRook:"车",
 pieceBishop:"象",
 colorWhite:"白方",
@@ -1090,7 +1129,7 @@ rule3:"<b>川は足を遅くする。</b>川のマスに入るのは普通の1�
 rule4:"<b>最後の1駒は強くなる。</b>片方が最後の1駒だけになったら、そのプレイヤーは追加の力を選ぶ：<b>♜ ルーク</b>（タテ・ヨコにスライド）または <b>♝ ビショップ</b>（ナナメにスライド）。ナイトとポーンの動きもそのまま残る。",
 rule5:"<b>布陣は本物の騎兵隊形。</b>各16駒、3列。<b>ローマ</b>——密集した塊、8 + 6 + 2。<b>モンゴル</b>——角を大きく広げて、6 + 6 + 4。",
 rule6:"<b>白が常に先手</b>、どのモードでも——ランダムでも。",
-rule7:"<b>手がない？ パス。</b>合法手がない陣営は、そのまま相手に手番が渡る。両方とも動けなければ引き分け。",
+rule7:"<b>パス。</b>合法な手がない陣営は、そのまま相手に手番が渡る。⏭ パスボタンでわざとパスすることもできる——ただし両方とも続けてパスすると引き分けになる。",
 rule8:"<b>ランダムな川は、本当にランダム。</b>各列に1マスの川、4段目か5段目——川は常に盤面を横切る1本のつながった帯になり、同じ列に2マス重なることは決してない（ポーンが川から出られなくなるため）。列ごとに段目は違ってよい。",
 rule9:"<b>盤面サイズ。</b>12×12盤（「グランド」）も同じルールで、<b>各28駒・4列</b>、川は6–7段目で各列に1マス。上でサイズを選ぶ——すべてのモードに適用される。",
 rule10:"<b>手は必ず届く。</b>すべての手は盤面全体を送り、相手が確認し、両方が数秒ごとに照合する——万が一手が失われても、盤面は自動で修復される。",
@@ -1099,6 +1138,7 @@ lblRiver12:"川 12×12（固定）",
 capRiverFixed:"5段目と4段目、各列に1マス。",
 capRiver12:"7段目と6段目、各列に1マス。",
 btnFlip:"⇅ 盤面を反転",
+btnPass:"⏭ パス",
 btnSoundOn:"🔊 音オン",
 btnSoundOff:"🔇 音オフ",
 btnMenu:"← メニュー",
@@ -1115,7 +1155,7 @@ empowerRook:"<b>♜</b>ルーク<br><small style=\"font-weight:500\">タテ・�
 empowerBishop:"<b>♝</b>ビショップ<br><small style=\"font-weight:500\">ナナメにスライド</small>",
 overRematch:"🐎 再戦",
 overMenu:"メニュー",
-footer:"Cavalaria v1.8.1 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
+footer:"Cavalaria v1.8.2 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
 statusToMove:"{color}の番",
 statusYourMove:"あなたの番です。",
 statusWaitingOpp:"相手を待っています…",
@@ -1131,8 +1171,10 @@ reasonNoPiecesBoth:"両陣営とも駒がなくなった。引き分け！",
 reasonWhiteOut:"白に駒がなくなった。黒の勝ち！",
 reasonBlackOut:"黒に駒がなくなった。白の勝ち！",
 reasonNoMoves:"どちらも手がない——引き分け。",
+reasonPassDraw:"両方とも続けてパス——引き分け。",
 reasonResigned:"{color}が投了しました。",
 passNote:"{color}に手がない——手番は{other}へ。",
+passNoteVoluntary:"{color}はパスした。",
 pillWhite:"♘ 白：{n} • {formation}",
 pillBlack:"♞ 黒：{n} • {formation}",
 pillRiverOn:"川あり",
@@ -1145,6 +1187,7 @@ capWhiteTook:"♘ 白が取った：{x}",
 capBlackTook:"♞ 黒が取った：{x}",
 movesEmpty:"まだ手はない——布陣は整った、あとは駆けるだけ。",
 moveEmpower:"★ {color}の最後の1駒が{piece}{glyph}の力を得た",
+movePass:"{color}はパスした",
 pieceRook:"ルーク",
 pieceBishop:"ビショップ",
 colorWhite:"白",
@@ -1225,7 +1268,7 @@ rule3:"<b>La rivière vous ralentit.</b> Entrer sur une case de rivière est un 
 rule4:"<b>La dernière unité devient plus forte.</b> Quand un camp n'a plus que sa toute dernière pièce, son joueur choisit un pouvoir supplémentaire pour elle : <b>♜ Tour</b> (glisse le long des rangées et des colonnes) ou <b>♝ Fou</b> (glisse le long des diagonales). Elle garde aussi ses déplacements de cavalier et de pion.",
 rule5:"<b>Les formations sont de la vraie cavalerie.</b> 16 pièces par camp, sur trois rangées. <b>Romain</b> — un bloc solide, 8 + 6 + 2. <b>Mongol</b> — les cornes bien ouvertes, 6 + 6 + 4.",
 rule6:"<b>Les Blancs jouent toujours en premier</b>, dans tous les modes — même en Aléatoire.",
-rule7:"<b>Pas de coup ? On passe.</b> Si un camp n'a aucun coup légal, le tour passe simplement à l'autre camp. Si aucun camp ne peut bouger, c'est un match nul.",
+rule7:"<b>Passer.</b> Si un camp n'a aucun coup légal, le tour passe simplement à l'autre camp. Vous pouvez aussi passer exprès avec le bouton ⏭ Passer — mais si les deux camps passent à la suite, c'est un match nul.",
 rule8:"<b>Rivière aléatoire, vraiment aléatoire.</b> Une case de rivière par colonne, sur la rangée 4 ou 5 — la rivière est donc toujours une bande continue à travers l'échiquier, jamais deux cases empilées dans la même colonne (cela piégerait un pion qui essaie de sortir de la rivière). Les colonnes peuvent partager une rangée.",
 rule9:"<b>Taille de l'échiquier.</b> L'échiquier 12×12 (« Grand ») suit les mêmes règles avec <b>28 pièces par camp sur quatre rangées</b> et la rivière sur les rangées 6–7, une case par colonne. Choisissez la taille ci-dessus — elle s'applique à tous les modes.",
 rule10:"<b>Les coups arrivent toujours.</b> Chaque coup envoie tout l'échiquier, l'autre camp le confirme, et les deux camps comparent leurs notes toutes les quelques secondes — si un coup se perd, les échiquiers se réparent tout seuls.",
@@ -1234,6 +1277,7 @@ lblRiver12:"Rivière 12×12 (fixe)",
 capRiverFixed:"Rangées 5 et 4, une case par colonne.",
 capRiver12:"Rangées 7 et 6, une case par colonne.",
 btnFlip:"⇅ Retourner l'échiquier",
+btnPass:"⏭ Passer",
 btnSoundOn:"🔊 Son activé",
 btnSoundOff:"🔇 Son désactivé",
 btnMenu:"← Menu",
@@ -1250,7 +1294,7 @@ empowerRook:"<b>♜</b>Tour<br><small style=\"font-weight:500\">glisse le long d
 empowerBishop:"<b>♝</b>Fou<br><small style=\"font-weight:500\">glisse le long des diagonales</small>",
 overRematch:"🐎 Revanche",
 overMenu:"Menu",
-footer:"Cavalaria v1.8.1 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
+footer:"Cavalaria v1.8.2 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
 statusToMove:"Aux {color} de jouer",
 statusYourMove:"À vous de jouer.",
 statusWaitingOpp:"En attente de l'adversaire…",
@@ -1266,8 +1310,10 @@ reasonNoPiecesBoth:"Il ne reste plus aucune pièce d'aucun côté. Match nul !",
 reasonWhiteOut:"Les Blancs n'ont plus de pièces. Les Noirs gagnent !",
 reasonBlackOut:"Les Noirs n'ont plus de pièces. Les Blancs gagnent !",
 reasonNoMoves:"Aucun camp n'a de coup — match nul.",
+reasonPassDraw:"Les deux camps ont passé à la suite — match nul.",
 reasonResigned:"Les {color} abandonnent.",
 passNote:"Les {color} n'ont pas de coup — le tour passe aux {other}.",
+passNoteVoluntary:"Les {color} ont passé.",
 pillWhite:"♘ Blancs : {n} • {formation}",
 pillBlack:"♞ Noirs : {n} • {formation}",
 pillRiverOn:"Rivière activée",
@@ -1280,6 +1326,7 @@ capWhiteTook:"♘ Les Blancs ont pris : {x}",
 capBlackTook:"♞ Les Noirs ont pris : {x}",
 movesEmpty:"Aucun coup pour l'instant — les formations sont en place, à vous de chevaucher.",
 moveEmpower:"★ La dernière unité des {color} gagne {piece} {glyph}",
+movePass:"Les {color} ont passé",
 pieceRook:"Tour",
 pieceBishop:"Fou",
 colorWhite:"Blancs",
@@ -1360,7 +1407,7 @@ rule3:"<b>강은 당신을 늦춥니다.</b> 강 칸에 들어가는 것은 보�
 rule4:"<b>마지막 기물은 강해집니다.</b> 한쪽이 마지막 기물 하나만 남으면, 플레이어는 추가 능력을 선택합니다. <b>♜ 룩</b>（가로·세로로 미끄러지듯 이동）또는 <b>♝ 비숍</b>（대각선으로 이동）. 나이트와 폰의 움직임도 그대로 유지합니다.",
 rule5:"<b>진형은 진짜 기병 진형입니다.</b> 양쪽 16개 기물, 세 줄. <b>로마</b>——단단한 블록, 8 + 6 + 2. <b>몽골</b>——뿔을 넓게 벌린 형태, 6 + 6 + 4.",
 rule6:"<b>백이 항상 먼저 둡니다</b>. 모든 모드에서——무작위 모드에서도 마찬가지입니다.",
-rule7:"<b>둘 수 없나요? 차례를 넘기세요.</b> 한쪽에 둘 수 있는 수가 없으면 차례는 그냥 상대에게 넘어갑니다. 양쪽 모두 둘 수 없으면 무승부입니다.",
+rule7:"<b>패스.</b>한쪽에 둘 수 있는 수가 없으면 차례는 그냥 상대에게 넘어갑니다. ⏭ 패스 버튼으로 일부러 패스할 수도 있습니다——하지만 양쪽이 연속으로 패스하면 무승부입니다.",
 rule8:"<b>무작위 강, 정말 무작위입니다.</b> 각 열마다 강 칸 하나, 4행 또는 5행——강은 항상 보드를 가로지르는 하나의 연결된 띠가 되며, 같은 열에 두 칸이 겹치지 않습니다（강에서 나오려는 폰이 갇히기 때문입니다）. 열마다 행을 공유할 수 있습니다.",
 rule9:"<b>보드 크기.</b> 12×12 보드（「그랜드」）도 같은 규칙으로 <b>양쪽 28개 기물, 네 줄</b>이며, 강은 6–7행에 각 열마다 한 칸씩 있습니다. 위에서 크기를 선택하세요——모든 모드에 적용됩니다.",
 rule10:"<b>수는 항상 도착합니다.</b> 모든 수는 전체 보드를 보내고, 상대가 확인하며, 양쪽이 몇 초마다 서로 대조합니다——수가 유실되더라도 보드는 스스로 복구됩니다.",
@@ -1369,6 +1416,7 @@ lblRiver12:"강 12×12（고정）",
 capRiverFixed:"5행과 4행, 각 열마다 한 칸.",
 capRiver12:"7행과 6행, 각 열마다 한 칸.",
 btnFlip:"⇅ 보드 뒤집기",
+btnPass:"⏭ 패스",
 btnSoundOn:"🔊 소리 켜기",
 btnSoundOff:"🔇 소리 끄기",
 btnMenu:"← 메뉴",
@@ -1385,7 +1433,7 @@ empowerRook:"<b>♜</b>룩<br><small style=\"font-weight:500\">가로·세로로
 empowerBishop:"<b>♝</b>비숍<br><small style=\"font-weight:500\">대각선으로 이동</small>",
 overRematch:"🐎 재대결",
 overMenu:"메뉴",
-footer:"Cavalaria v1.8.1——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
+footer:"Cavalaria v1.8.2——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
 statusToMove:"{color} 차례",
 statusYourMove:"당신의 차례입니다.",
 statusWaitingOpp:"상대를 기다리는 중…",
@@ -1401,8 +1449,10 @@ reasonNoPiecesBoth:"양쪽 모두 기물이 남지 않았습니다. 무승부!",
 reasonWhiteOut:"백의 기물이 없습니다. 흑 승리!",
 reasonBlackOut:"흑의 기물이 없습니다. 백 승리!",
 reasonNoMoves:"양쪽 모두 둘 수가 없습니다——무승부.",
+reasonPassDraw:"양쪽이 연속으로 패스——무승부.",
 reasonResigned:"{color}이 기권했습니다.",
 passNote:"{color} 둘 수가 없습니다——차례가 {other}에게 넘어갑니다.",
+passNoteVoluntary:"{color} 패스했습니다.",
 pillWhite:"♘ 백: {n} • {formation}",
 pillBlack:"♞ 흑: {n} • {formation}",
 pillRiverOn:"강 켜기",
@@ -1415,6 +1465,7 @@ capWhiteTook:"♘ 백이 잡은 기물: {x}",
 capBlackTook:"♞ 흑이 잡은 기물: {x}",
 movesEmpty:"아직 둔 수가 없습니다——진형은 준비됐습니다. 이제 질주하세요.",
 moveEmpower:"★ {color}의 마지막 기물이 {piece}{glyph} 능력을 얻었습니다",
+movePass:"{color} 패스",
 pieceRook:"룩",
 pieceBishop:"비숍",
 colorWhite:"백",
@@ -1491,6 +1542,7 @@ function translateReason(reason){
   if(reason==='White has no pieces left. Black wins!') return t('reasonWhiteOut');
   if(reason==='Black has no pieces left. White wins!') return t('reasonBlackOut');
   if(reason==='Neither side has a move — draw.') return t('reasonNoMoves');
+  if(reason==='Both sides passed in a row — draw.') return t('reasonPassDraw');
   const m=reason.match(/^(White|Black) resigned\.$/);
   if(m) return t('reasonResigned',{color:t(m[1]==='White'?'colorWhite':'colorBlack')});
   return reason;
@@ -1499,6 +1551,8 @@ function translatePassNote(note){
   if(!note) return '';
   const m=note.match(/^(White|Black) has no moves — turn passes to (White|Black)\.$/);
   if(m) return t('passNote',{color:t(m[1]==='White'?'colorWhite':'colorBlack'),other:t(m[2]==='White'?'colorWhite':'colorBlack')});
+  const mp=note.match(/^(White|Black) passed\.$/);
+  if(mp) return t('passNoteVoluntary',{color:t(mp[1]==='White'?'colorWhite':'colorBlack')});
   return note;
 }
 function applyI18n(){
@@ -1617,12 +1671,18 @@ function boardOverlaySVG(){
   const rc=d=>{ const r=(d/size)|0, c=d%size; return {x:(c+0.5)*cell, y:(r+0.5)*cell}; };
   const f2=v=>Math.round(v*100)/100;
   let s='<defs><linearGradient id="rivw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc0f0"/><stop offset=".5" stop-color="#2f6fb2"/><stop offset="1" stop-color="#7cc0f0"/></linearGradient></defs>';
-  const river=[...(state.river||[])].sort((a,b)=>(a%size)-(b%size));
+  // Sort by DISPLAY file, not board file: when the board is flipped the
+  // leftmost river square on screen is the last board file, and the path's
+  // edge extensions (left edge at the first point, right edge at the last)
+  // must follow the screen order — sorting by board file made the curve
+  // start at the left edge, jump to the far right, and double back on
+  // itself, looping the river (fixed Nov 26, 2026).
+  const river=[...(state.river||[])].map(disp).sort((a,b)=>(a%size)-(b%size));
   if(river.length){
-    const pts=river.map(i=>rc(disp(i)));
+    const pts=river.map(i=>rc(i));
     const ext=[{x:-cell*0.6,y:pts[0].y},...pts,{x:100+cell*0.6,y:pts[pts.length-1].y}];
     const path=smoothPath(ext);
-    for(const i of river){ const d=disp(i), r=(d/size)|0, c=d%size;
+    for(const d of river){ const r=(d/size)|0, c=d%size;
       s+='<rect x="'+f2(c*cell+0.6)+'" y="'+f2(r*cell+0.6)+'" width="'+f2(cell-1.2)+'" height="'+f2(cell-1.2)+'" rx="1.5" fill="rgba(110,170,80,0.30)"/>';
     }
     s+='<path d="'+path+'" fill="none" stroke="#7fae5a" stroke-width="'+f2(cell*0.88)+'" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -1634,8 +1694,10 @@ function boardOverlaySVG(){
       const px=-ty, py=tx, cx=pts[k].x, cy=pts[k].y;
       // Seeded per-square randomness: the same game always draws the same
       // river, but tufts, weed and ripples land unevenly — no two stretches
-      // of bank look alike.
-      const rnd=salt=>{ let h=(((state.seed>>>0)^0x9e3779b9^Math.imul(k+1,374761393)^Math.imul(salt+1,668265263))>>>0); h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))>>>0)/4294967296; };
+      // of bank look alike. Seeded by the BOARD square (disp is its own
+      // inverse), so flipping the board doesn't move the decorations.
+      const bi=disp(river[k]);
+      const rnd=salt=>{ let h=(((state.seed>>>0)^0x9e3779b9^Math.imul(bi+1,374761393)^Math.imul(salt+1,668265263))>>>0); h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))>>>0)/4294967296; };
       const ang=Math.atan2(ty,tx)*180/Math.PI;
       const tuft=(x,y,dx,dy,sc)=>{
         const a=Math.atan2(dx,-dy)*180/Math.PI+(rnd(40)-0.5)*36;
@@ -1707,12 +1769,17 @@ function render(){
   $('capWhite').textContent=t('capWhiteTook',{x:capW?('♞ × '+capW):'—'});
   $('capBlack').textContent=t('capBlackTook',{x:capB?('♘ × '+capB):'—'});
   $('movesBox').innerHTML=state.history.length?state.history.map((h,i)=>{
+    if(h.pass) return '<b>'+t('movePass',{color:t(h.color==='w'?'colorWhite':'colorBlack')})+'</b>';
     if(h.empower) return '<b>'+t('moveEmpower',{color:t(h.color==='w'?'colorWhite':'colorBlack'),piece:t(h.empower==='R'?'pieceRook':'pieceBishop'),glyph:h.empower==='R'?'♜':'♝'})+'</b>';
     const n=Math.floor(i/2)+1, pre=(i%2===0)?(n+'. '):'';
     return pre+'<b>C</b> '+sqName(h.from,state.size)+(h.captured?'x':'–')+sqName(h.to,state.size)+(h.double?' (2)':'');
   }).join(' &nbsp; '):t('movesEmpty');
   if(state.over) showOver();
   showEmpowerModalIfNeeded();
+  // The Pass button only exists on a human's turn — never while the game
+  // is over, an empowerment is pending, or the bot/opponent is to move.
+  const bp=$('btnPass');
+  if(bp) bp.style.display=(!state.over&&!state.pendingEmpower&&humanControls(state.turn))?'':'none';
 }
 function humanControls(color){
   if(playMode==='local') return true;
@@ -1781,6 +1848,15 @@ function finishMove(from,to){
   if(playMode==='online') sendState(); // full board, ack-tracked — not a fire-and-forget delta
   maybeBotMove();
 }
+function finishPass(){
+  if(!state||state.over||state.pendingEmpower||!humanControls(state.turn)) return;
+  if(!doPass(state)) return;
+  selected=-1; legalCache=[];
+  beep(440,0.08);
+  render();
+  if(playMode==='online') sendState(); // the pass rides in the full state, like a move
+  maybeBotMove();
+}
 
 /* ---- starting games ---- */
 function startGame(m,seed,opts){
@@ -1814,6 +1890,7 @@ function backToMenu(){
 $('btnMenu').onclick=backToMenu;
 $('btnOverMenu').onclick=backToMenu;
 $('btnFlip').onclick=()=>{ flipped=!flipped; render(); };
+$('btnPass').onclick=finishPass;
 $('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=t(soundOn?'btnSoundOn':'btnSoundOff'); };
 $('btnCopy').onclick=async()=>{
   const link=location.origin+location.pathname+'?room='+roomCode;
