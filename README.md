@@ -2,7 +2,7 @@
 
 **A free browser chess variant where every piece is a cavalryman: a knight fused with a pawn, fighting over river terrain in real cavalry formations.**
 
-The piece symbol is custom: a pawn riding a horse, drawn as a single-colour SVG (`piece.svg`, also embedded in `index.html` so the page stays self-contained). White and black pieces are the same shape in different colours.
+The piece symbol is custom: a classic knight (horse head + arched neck) with a small pawn — just a torso and a ball head — riding diagonally on the back of its neck, drawn as a single-colour SVG (`piece.svg`, also embedded in `index.html` so the page stays self-contained). White and black pieces are the same shape in different colours.
 
 Play it right now — no sign-up, no download, no cost. PC, mobile, and (probably not) your calculator.
 
