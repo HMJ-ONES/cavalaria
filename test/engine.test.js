@@ -313,6 +313,27 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   const mvH2 = movesFrom(E.legalMoves(stH2), 55);
   check('jump over water to the same side is a full L (h2->g4)', mvH2.includes(38), 'got ' + mvH2.join(','));
   check('h2: 5 moves total', mvH2.length === 5, 'got ' + mvH2.join(','));
+  // Regression, Nov 27 2026 (screenshot 7, 12x12 Random, seed 1675977937,
+  // river a7 e7 f7 h7 i7 j7 k7 l7 b6 c6 d6 g6): White on d8 (51, far side,
+  // hasMoved). Under the old one-sided rule the piece could only jump
+  // backward into the river — every forward move was blocked because its
+  // destination was "past the water", even though the piece was already
+  // past it. Now a piece past the river moves freely on its own side.
+  const D8_RIVER = [60, 64, 65, 67, 68, 69, 70, 71, 73, 74, 75, 78];
+  const stD8 = E.newGame('random', 1, { board: boardWith([[51, C('w', { hasMoved: true })], [118, C('w')], [38, C('b')], [37, C('b')], [0, C('b')]]), river: D8_RIVER, turn: 'w', size: 12 });
+  const mvD8 = movesFrom(E.legalMoves(stD8), 51);
+  check('d8 past the river: all six forward moves (9B/10C/9C/9D/10E/9F)', [37, 26, 38, 39, 28, 41].every(x => mvD8.includes(x)), 'got ' + mvD8.join(','));
+  check('d8 past the river: 9 moves total', mvD8.length === 9, 'got ' + mvD8.join(','));
+  check('d8 past the river: never crosses back to 6E in one round', !mvD8.includes(76), 'got ' + mvD8.join(','));
+  check('d8 past the river: backward Ls into the water / far side stay (b7/f7/c6)', [61, 65, 74].every(x => mvD8.includes(x)));
+  // Same rule, Black's side: Black on d5 (87, row 7, far side for Black,
+  // whose forward is south). It moves freely south and never crosses back
+  // north across the water (c7 is blocked; e7/b6 are water, f6 is far side).
+  const stB5 = E.newGame('random', 1, { board: boardWith([[87, C('b', { hasMoved: true })], [0, C('b')], [51, C('w')], [118, C('w')]]), river: D8_RIVER, turn: 'b', size: 12 });
+  const mvB5 = movesFrom(E.legalMoves(stB5), 87);
+  check('black d5 past the river: forward Ls + pawn step south (c3/e3/b4/f4/d4)', [110, 112, 97, 101, 99].every(x => mvB5.includes(x)), 'got ' + mvB5.join(','));
+  check('black d5 past the river: never crosses back north to c7', !mvB5.includes(62), 'got ' + mvB5.join(','));
+  check('black d5 past the river: 8 moves total', mvB5.length === 8, 'got ' + mvB5.join(','));
   // A pawn capture across the river is blocked even to kill: White on d5
   // (27, dry zone) with Black on c6 (18) and e6 (20) — both are on the far
   // side, so the captures, the step to d6 (19) and the double to d7 (11)

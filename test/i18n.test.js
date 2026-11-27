@@ -156,7 +156,7 @@ console.log('Attributes resolve:');
   for (const l of LANGS) for (const k of textKeys) if (/&[a-zA-Z]+;/.test(dict[l][k] || '')) ent.push(l + ':' + k);
   check('no HTML entity in any data-i18n (textContent) string, all 7 languages (' + textKeys.length + ' keys)', ent.length === 0, JSON.stringify(ent.slice(0, 5)));
   check('no v1.7 left in the file', !html.includes('v1.7'));
-  check('footer key carries v1.13 in every language', LANGS.every(l => dict[l].footer.includes('v1.13')));
+  check('footer key carries v1.14 in every language', LANGS.every(l => dict[l].footer.includes('v1.14')));
 }
 
 console.log('Switching changes visible text (menu):');
