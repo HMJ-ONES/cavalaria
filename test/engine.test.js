@@ -159,12 +159,14 @@ console.log('Knight moves + river:');
   const stJ = E.newGame('main', 1, { board: boardWith([[35, C('w')], [27, C('w')], [0, C('b')]]), river: [], turn: 'w' });
   const mvJ = movesFrom(E.legalMoves(stJ), 35);
   check('knight jumps over a blocking own piece', mvJ.length === 8 && [18,20,25,29,41,45,50,52].every(x => mvJ.includes(x)), 'got ' + mvJ.join(','));
-  // From a river square: only 1+1 diagonals + pawn 1 (no double, no 2+1)
+  // From a river square: 1+1 diagonals + pawn 1 + the full L that stays
+  // inside the river zone (v1.9.1). Stepping out is still 1+1 only.
   const stR = E.newGame('main', 1, { board: boardWith([[35, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvR = movesFrom(E.legalMoves(stR), 35);
-  check('knight from the river: 4 diagonals + pawn 1 = 5', mvR.length === 5, 'got ' + mvR.join(','));
+  check('knight from the river: 4 diagonals + pawn 1 + 2 in-zone Ls = 7', mvR.length === 7, 'got ' + mvR.join(','));
   check('river knight diagonals are c5/e5/c3/e3', [26,28,42,44].every(x => mvR.includes(x)));
-  check('river knight has NO 2+1 jump', [18,20,25,29,41,45,50,52].every(x => !mvR.includes(x)));
+  check('river knight completes the L inside the river (b5/f5)', [25,29].every(x => mvR.includes(x)));
+  check('river knight has NO L that leaves the river', [18,20,33,37,41,45,50,52].every(x => !mvR.includes(x)));
   check('no double-step out of the river', !mvR.includes(19));
   check('pawn still steps 1 forward out of the river', mvR.includes(27));
   // Entering the river is a normal move: b2 knight lands on river c4 (34)
@@ -204,8 +206,9 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   // diagonal steps, no 2+1 leap over the water to the opposite bank.
   const stD = E.newGame('main', 1, { board: boardWith([[26, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvD = movesFrom(E.legalMoves(stD), 26);
-  check('dry zone square: only 1+1 diagonals + pawn (6 moves)', mvD.length === 6 && [17, 19, 33, 35, 18, 10].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
-  check('dry zone square: NO 2+1 leap over the river', [8, 12, 40, 44, 16, 20, 32, 36].every(x => !mvD.includes(x)));
+  check('dry zone square: 1+1 diagonals + pawn + 2 in-zone Ls (8 moves)', mvD.length === 8 && [17, 19, 33, 35, 18, 10, 32, 36].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
+  check('dry zone square: the in-zone Ls are offered (a4/e4)', [32, 36].every(x => mvD.includes(x)));
+  check('dry zone square: NO L that leaves the river', [8, 12, 40, 44, 16, 20].every(x => !mvD.includes(x)));
   // Slides stop at the water: empowered rook on d2 (51) slides up the file
   // to d3, then d4 (river) is the last square — never d5+.
   const stR = E.newGame('main', 1, { board: boardWith([[51, C('w', { empowered: 'R' })], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
@@ -447,9 +450,10 @@ console.log('12x12 moves:');
   // Same square IS a river square in the fixed 12x12 river: only 1+1 diagonals + pawn 1
   const stR = E.newGame('main', 1, { board: boardWith([[77, C('w')], [0, C('b')]]), river: E.FIXED_RIVER_12, turn: 'w', size: 12 });
   const mvR = movesFrom(E.legalMoves(stR), 77);
-  check('12x12 knight from the river: 4 diagonals + pawn 1 = 5', mvR.length === 5, 'got ' + mvR.join(','));
+  check('12x12 knight from the river: 4 diagonals + pawn 1 + 2 in-zone Ls = 7', mvR.length === 7, 'got ' + mvR.join(','));
   check('12x12 river knight diagonals are e7/g7/e5/g5', [64,66,88,90].every(x => mvR.includes(x)));
-  check('12x12 river knight has NO 2+1 jump and no double-step', [52,54,63,67,87,91,100,102,53].every(x => !mvR.includes(x)));
+  check('12x12 river knight completes the L inside the river (d7/h7)', [63,67].every(x => mvR.includes(x)));
+  check('12x12 river knight has NO L that leaves the river and no double-step', [52,54,87,91,100,102,53].every(x => !mvR.includes(x)));
 }
 
 console.log('12x12 bot games + serialization:');
