@@ -38,10 +38,11 @@ With the river on, ranks 4–5 (8×8) or 6–7 (12×12) hold a band of water —
       rank 6: . . . ~ ~ ~ ~ ~ ~ . . .
 ```
 
-- **Entering** a river square is a normal move.
-- **Leaving** one costs an extra square: a knight's jump from a river square is only **1 forward + 1 to the side** (a single diagonal step) instead of 2 + 1. A pawn leaving the river still steps 1 forward or captures 1 diagonally, but it can't double-step out of the river — the exit cost eats the second square.
-- The cost counts **once, at the start of the move**. Jumping *over* the river costs nothing extra, and landing back in the river costs nothing extra either.
-- The river penalty applies only to the knight's long leg; an empowered piece's slides are not shortened.
+- **Nothing jumps over the river.** To cross, step in, then step out the other side.
+- **On the bank** (one rank outside the river zone, on your own side), only the **forward** jumps shrink to a **mini L** — a single diagonal step (1 + 1) into the water. Sideways and backward jumps stay full 2 + 1.
+- **Inside the river zone** (any square on the river's two ranks, wet or dry), every jump is a single diagonal step — you wade, never leap. This also closes the old hole where a dry square inside the zone let a piece leap 2 + 1 straight over the water to the opposite bank.
+- **Slides stop at the water:** an empowered rook or bishop slide ends on the first river square it meets — entering the river is always the last square of that piece's turn. (One gap remains on random rivers: a bishop can slip diagonally *between* two staggered river squares without touching water, because the rule is about the water squares themselves.)
+- A pawn leaving a river square still steps 1 forward or captures 1 diagonally, but it can't double-step out of the river.
 - **Look:** the river is drawn as one flowing illustrated river over the board (a smooth curve through the river squares, grass and sand banks, grass tufts on the water's edge, seaweed and ripples in the water) — it crosses square edges and meanders into neighbouring squares, while the rules still use the squares underneath. The tufts, weed and ripples are placed unevenly from the game's seed, so no two stretches of bank look alike. Selection, last-move and empowered outlines are drawn in the same overlay so they stay visible above the water.
 
 ### The formations — 16 pieces a side (8×8) in three ranks, 28 a side (12×12) in four
@@ -174,6 +175,7 @@ wrangler.toml         Cloudflare Pages notes (Pages needs no config)
 
 ## Versions
 
+- **v1.9** — the river is a wall, not a speed bump: nothing jumps over it. On the bank, only the forward jumps shrink to a mini L (a single diagonal step into the water); sideways and backward jumps stay full. Inside the river's two ranks, every jump is a single diagonal step — including from dry squares, which used to let a piece leap straight over the water. A rook/bishop slide stops at the first river square it meets. (One gap remains on random rivers: a bishop can slip diagonally between two staggered river squares without touching water.) Rule 3 rewritten in all 7 languages; 22 new engine checks.
 - **v1.8.2** — flipped river fixed (the curve was sorted by board file while its edge extensions assumed screen order, so flipping doubled the river back on itself into a loop — now sorted by display file, and decorations are seeded by board square so they don't jump when flipping); ⏭ Pass button — pass voluntarily on your turn, two passes in a row are a draw; Portuguese river strings say "Rio ativo" instead of "Rio ligado".
 - **v1.8.1** — mode titles no longer show a literal `&nbsp;`: the translated strings now use a real non-breaking space (`\u00A0`), because the menu sets titles with `textContent`, which never parses HTML entities. A test pins it: no HTML entity may appear in any `data-i18n` string in any language.
 - **v1.8** — 7-language switcher (EN/PT/ES/ZH/JA/FR/KO) at the top of the page, choice remembered, browser language auto-detected; formation cards show mini pictures of the real board.

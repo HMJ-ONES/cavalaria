@@ -176,6 +176,67 @@ console.log('Knight moves + river:');
   check('pawn captures diagonally out of the river (c5)', movesFrom(E.legalMoves(stP), 35).includes(26));
 }
 
+console.log('River blocks the way (v1.9 — nothing jumps over it):');
+{
+  // Bank, White on d3 (43, rank 3, one rank below the river zone rows 3-4):
+  // forward Ls shrink to mini Ls (1+1 into the water); lateral and
+  // backward Ls stay full 2+1.
+  const stB = E.newGame('main', 1, { board: boardWith([[43, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvB = movesFrom(E.legalMoves(stB), 43);
+  check('bank: forward Ls become mini Ls (c4/e4)', [34, 36].every(x => mvB.includes(x)), 'got ' + mvB.join(','));
+  check('bank: forward 2+1 jumps over the river are gone (c5/e5)', [26, 28].every(x => !mvB.includes(x)));
+  check('bank: lateral Ls stay full (b4/f4)', [33, 37].every(x => mvB.includes(x)));
+  check('bank: backward Ls stay full (c1/e1, b2/f2)', [58, 60, 49, 53].every(x => mvB.includes(x)));
+  check('bank: pawn step + double into the river zone (d4/d5)', mvB.includes(35) && mvB.includes(27));
+  check('bank: 10 moves total (2 pawn + 2 mini + 2 lateral + 4 backward)', mvB.length === 10, 'got ' + mvB.join(','));
+  // Bank, Black on d6 (19, rank 6, one rank above the zone): mirror image.
+  const stK = E.newGame('main', 1, { board: boardWith([[19, C('b')], [63, C('w')]]), river: E.FIXED_RIVER, turn: 'b' });
+  const mvK = movesFrom(E.legalMoves(stK), 19);
+  check('bank (Black): forward Ls become mini Ls (c5/e5)', [26, 28].every(x => mvK.includes(x)), 'got ' + mvK.join(','));
+  check('bank (Black): forward 2+1 jumps over the river are gone (c4/e4)', [34, 36].every(x => !mvK.includes(x)));
+  check('bank (Black): lateral + backward Ls stay full', [25, 29, 2, 4, 9, 13].every(x => mvK.includes(x)));
+  // Two ranks away the mini L does NOT apply: d2 (51) still jumps 2+1
+  // into the river (c4/e4).
+  const stF = E.newGame('main', 1, { board: boardWith([[51, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvF = movesFrom(E.legalMoves(stF), 51);
+  check('two ranks away: full 2+1 jump into the river (c4/e4)', [34, 36].every(x => mvF.includes(x)));
+  // Dry square INSIDE the zone (c5, 26 — not a river square): only single
+  // diagonal steps, no 2+1 leap over the water to the opposite bank.
+  const stD = E.newGame('main', 1, { board: boardWith([[26, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvD = movesFrom(E.legalMoves(stD), 26);
+  check('dry zone square: only 1+1 diagonals + pawn (6 moves)', mvD.length === 6 && [17, 19, 33, 35, 18, 10].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
+  check('dry zone square: NO 2+1 leap over the river', [8, 12, 40, 44, 16, 20, 32, 36].every(x => !mvD.includes(x)));
+  // Slides stop at the water: empowered rook on d2 (51) slides up the file
+  // to d3, then d4 (river) is the last square — never d5+.
+  const stR = E.newGame('main', 1, { board: boardWith([[51, C('w', { empowered: 'R' })], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvR = movesFrom(E.legalMoves(stR), 51);
+  check('rook slide stops at the first river square (d4)', mvR.includes(43) && mvR.includes(35), 'got ' + mvR.join(','));
+  check('rook slide never passes the river (no d5/d6/d7/d8)', [27, 19, 11, 3].every(x => !mvR.includes(x)));
+  check('rook slide along the rank is unaffected (a2..h2)', [48, 49, 50, 52, 53, 54, 55].every(x => mvR.includes(x)));
+  // A slide may still capture ON the river square, then stops.
+  const stRC = E.newGame('main', 1, { board: boardWith([[51, C('w', { empowered: 'R' })], [35, C('b')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvRC = movesFrom(E.legalMoves(stRC), 51);
+  check('rook slide captures on the river square (d4) and stops', mvRC.includes(35) && !mvRC.includes(27));
+  // Bishop diagonal stops at the water: b2 (49) -> c3, then d4 (river).
+  const stBi = E.newGame('main', 1, { board: boardWith([[49, C('w', { empowered: 'B' })], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvBi = movesFrom(E.legalMoves(stBi), 49);
+  check('bishop slide stops at the first river square (d4)', mvBi.includes(42) && mvBi.includes(35) && !mvBi.includes(28) && !mvBi.includes(21));
+  // Black rook from the far side: d7 (11) slides down to d6, d5, then d4.
+  const stBR = E.newGame('main', 1, { board: boardWith([[11, C('b', { empowered: 'R' })], [63, C('w')]]), river: E.FIXED_RIVER, turn: 'b' });
+  const mvBR = movesFrom(E.legalMoves(stBR), 11);
+  check('rook slide from the far side stops at the river (d4)', [19, 27, 35].every(x => mvBR.includes(x)) && [43, 51, 59].every(x => !mvBR.includes(x)));
+  // Pawn capture + mini L to the same square is listed once.
+  const stDu = E.newGame('main', 1, { board: boardWith([[43, C('w')], [34, C('b')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvDu = movesFrom(E.legalMoves(stDu), 43);
+  check('pawn capture and mini L to the same square are one move', mvDu.filter(x => x === 34).length === 1 && mvDu.length === 10, 'got ' + mvDu.join(','));
+  // 12x12 bank: White on f7 (89, row 7, one rank below the zone rows 5-6).
+  const st12 = E.newGame('main', 1, { board: boardWith([[89, C('w')], [0, C('b')]]), river: E.FIXED_RIVER_12, turn: 'w', size: 12 });
+  const mv12 = movesFrom(E.legalMoves(st12), 89);
+  check('12x12 bank: forward Ls become mini Ls (76/78)', [76, 78].every(x => mv12.includes(x)), 'got ' + mv12.join(','));
+  check('12x12 bank: forward 2+1 jumps over the river are gone (64/66)', [64, 66].every(x => !mv12.includes(x)));
+  check('12x12 bank: lateral Ls stay full (75/79)', [75, 79].every(x => mv12.includes(x)));
+}
+
 console.log('Last-unit empowerment:');
 {
   // White e4 (36) + a1 (56); Black d6 (19) + a8 (0). White knight 36->19 captures.
