@@ -190,8 +190,8 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   check('bank: forward 2+1 jumps over the river are gone (c5/e5)', [26, 28].every(x => !mvB.includes(x)));
   check('bank: lateral Ls stay full (b4/f4)', [33, 37].every(x => mvB.includes(x)));
   check('bank: backward Ls stay full (c1/e1, b2/f2)', [58, 60, 49, 53].every(x => mvB.includes(x)));
-  check('bank: pawn step + double into the river zone (d4/d5)', mvB.includes(35) && mvB.includes(27));
-  check('bank: 10 moves total (2 pawn + 2 mini + 2 lateral + 4 backward)', mvB.length === 10, 'got ' + mvB.join(','));
+  check('bank: pawn step into the river is fine (d4), double-step over water to dry land is blocked (d5)', mvB.includes(35) && !mvB.includes(27));
+  check('bank: 9 moves total (1 pawn + 2 mini + 2 lateral + 4 backward)', mvB.length === 9, 'got ' + mvB.join(','));
   // Bank, Black on d6 (19, rank 6, one rank above the zone): mirror image.
   const stK = E.newGame('main', 1, { board: boardWith([[19, C('b')], [63, C('w')]]), river: E.FIXED_RIVER, turn: 'b' });
   const mvK = movesFrom(E.legalMoves(stK), 19);
@@ -207,7 +207,8 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   // diagonal steps, no 2+1 leap over the water to the opposite bank.
   const stD = E.newGame('main', 1, { board: boardWith([[26, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvD = movesFrom(E.legalMoves(stD), 26);
-  check('dry zone square: pawn + 4 backward Ls only, NO free 1+1 steps (6 moves)', mvD.length === 6 && [18, 10, 32, 36, 41, 43].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
+  check('dry zone square: 4 backward Ls only, NO pawn step/double onto the far side (4 moves)', mvD.length === 4 && [32, 36, 41, 43].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
+  check('dry zone square: a dry pawn cannot step or double onto the far side (c6/c7)', [18, 10].every(x => !mvD.includes(x)));
   check('dry zone square: the backward Ls are offered (a4/e4/a3/e3)', [32, 36, 41, 43].every(x => mvD.includes(x)));
   check('dry zone square: a dry piece gets no 1+1 diagonal steps (b6/d6/b4/d4)', [17, 19, 33, 35].every(x => !mvD.includes(x)));
   check('dry zone square: NO forward L that leaves the river', [8, 12, 40, 44, 16, 20].every(x => !mvD.includes(x)));
@@ -233,7 +234,7 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   // Pawn capture + mini L to the same square is listed once.
   const stDu = E.newGame('main', 1, { board: boardWith([[43, C('w')], [34, C('b')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvDu = movesFrom(E.legalMoves(stDu), 43);
-  check('pawn capture and mini L to the same square are one move', mvDu.filter(x => x === 34).length === 1 && mvDu.length === 10, 'got ' + mvDu.join(','));
+  check('pawn capture and mini L to the same square are one move', mvDu.filter(x => x === 34).length === 1 && mvDu.length === 9, 'got ' + mvDu.join(','));
   // 12x12 bank: White on f7 (89, row 7, one rank below the zone rows 5-6).
   const st12 = E.newGame('main', 1, { board: boardWith([[89, C('w')], [0, C('b')]]), river: E.FIXED_RIVER_12, turn: 'w', size: 12 });
   const mv12 = movesFrom(E.legalMoves(st12), 89);
@@ -283,6 +284,33 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   check('dry zone k6: backward Ls are regular (j4/l4/i5)', [105, 107, 92].every(x => mvK6.includes(x)));
   check('dry zone k6: pawn step into the water is fine (k7)', mvK6.includes(70));
   check('dry zone k6: 5 moves total', mvK6.length === 5, 'got ' + mvK6.join(','));
+  // Regression, Nov 27 2026 (screenshot 4, 8x8 Random, seed 838240930):
+  // White on e3 (44, bank, dry) — the river is a4 b4 c4 d4 e4 f5 g4 h4.
+  // The pawn double-step to e5 (28) passes over the water at e4 and lands
+  // on dry land, so it is blocked even on the first move.
+  const E3_RIVER = [29, 32, 33, 34, 35, 36, 38, 39];
+  const stE3 = E.newGame('main', 1, { board: boardWith([[44, C('w')], [0, C('b')]]), river: E3_RIVER, turn: 'w' });
+  const mvE3 = movesFrom(E.legalMoves(stE3), 44);
+  check('pawn double-step over water to dry land is blocked, even first move (e5)', !mvE3.includes(28), 'got ' + mvE3.join(','));
+  check('pawn step into the water is fine (e4)', mvE3.includes(36));
+  check('e3: 9 moves total', mvE3.length === 9, 'got ' + mvE3.join(','));
+  // A pawn capture across the river is blocked even to kill: White on d5
+  // (27, dry zone) with Black on c6 (18) and e6 (20) — both are on the far
+  // side, so the captures, the step to d6 (19) and the double to d7 (11)
+  // are all forbidden. Only the 4 backward Ls remain.
+  const stCap = E.newGame('main', 1, { board: boardWith([[27, C('w')], [56, C('w')], [18, C('b')], [20, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
+  const mvCap = movesFrom(E.legalMoves(stCap), 27);
+  check('pawn capture across the river is blocked even to kill (c6/e6)', [18, 20].every(x => !mvCap.includes(x)), 'got ' + mvCap.join(','));
+  check('pawn step/double across the river is blocked (d6/d7)', [19, 11].every(x => !mvCap.includes(x)));
+  check('pawn capture across the river: 4 moves total', mvCap.length === 4, 'got ' + mvCap.join(','));
+  // A bishop cannot slip diagonally between two staggered river squares:
+  // White bishop on b5 (85, 12x12, river a7 b7 c7 d6 e6 f6 g6 h7 i6 j6 k7
+  // l7) slides up-right through c6 (74) and d5 (63) — both dry zone
+  // squares — but must stop before e4 (52), on the far side.
+  const stBi2 = E.newGame('main', 1, { board: boardWith([[85, C('w', { empowered: 'B', hasMoved: true })], [0, C('b')]]), river: K6_RIVER, turn: 'w', size: 12 });
+  const mvBi2 = movesFrom(E.legalMoves(stBi2), 85);
+  check('bishop slide slips between staggered water squares but stops at the zone edge (c6/d5)', mvBi2.includes(74) && mvBi2.includes(63), 'got ' + mvBi2.join(','));
+  check('bishop slide never steps onto the far side (e4)', !mvBi2.includes(52));
 }
 
 console.log('Last-unit empowerment:');
