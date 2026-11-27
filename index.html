@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.14 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
+<!-- Cavalaria v1.15 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -169,7 +169,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <ul>
       <li data-i18n-html="rule1"><b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).</li>
       <li data-i18n-html="rule2"><b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.</li>
-      <li data-i18n-html="rule3"><b>The river blocks the way.</b> Only a piece already in the water is slowed by it. On dry land you jump with full, regular Ls — a move is only blocked if it would land on the opposite side of the water from where you stand, across the river either way. A jump that stays on your side is fine even if it passes over a river square, and a piece already past the river moves freely on its own side. A forward jump that lands in the water stays a full L; one that would land across the water is blocked, and shrinks to a single diagonal step into the water instead. Once in the water, you can only step out with a single diagonal step — a piece in the water never does a full L, front or back; a step across the river's bend is not allowed. Backward jumps are full — except a backward jump from the far side that would land back across the water. A pawn step, a first-move double-step and a diagonal capture obey the same rule — none may land across the water, even to kill. A rook or bishop slide stops at the first river square it meets, and cannot step across the water.</li>
+      <li data-i18n-html="rule3"><b>The river blocks the way.</b> Only a piece already in the water is slowed by it. On dry land you jump with full, regular Ls — a move is only blocked if it would land on the opposite side of the water from where you stand, across the river either way. A jump that stays on your side is fine even if it passes over a river square, and a piece already past the water in its own file moves freely on its own side. Whether you are past the river is judged file by file, against the water square in your own file — the river curves, so a piece can be past the water while still standing in the river's band. A forward jump that lands in the water stays a full L; one that would land across the water is blocked, and shrinks to a single diagonal step into the water instead. Once in the water, you can only step out with a single diagonal step — a piece in the water never does a full L, front or back; a step across the river's bend is not allowed. Backward jumps are full — except a backward jump from past the water that would land back across it. A pawn step, a first-move double-step and a diagonal capture obey the same rule — none may land across the water, even to kill. A rook or bishop slide stops at the first river square it meets, and cannot step across the water.</li>
       <li data-i18n-html="rule4"><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
       <li data-i18n-html="rule5"><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
       <li data-i18n-html="rule6"><b>White always moves first</b>, in every mode — even Random.</li>
@@ -223,7 +223,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
   </div>
 </div>
 
-<footer data-i18n-html="footer"> Cavalaria v1.14 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer data-i18n-html="footer"> Cavalaria v1.15 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -343,15 +343,15 @@ function pseudoMoves(board,river,color,size){
   // in a single turn — not a pawn step, not a first-move double-step, not
   // a diagonal capture (even to kill), and not a rook or bishop slide.
   // A move is blocked ONLY when its destination lands on the OPPOSITE side
-  // of the water from where the piece stands. From the near side (or the
-  // zone) that means past the water in the destination's file; from the
-  // far side — a piece already fully past the river — it means back across
+  // of the water from where the piece stands. From the near side that
+  // means past the water in the destination's file; from the far side —
+  // a piece already past the water in its own file — it means back across
   // to the near side. The path does not matter: a jump that stays on the
   // same side of the water is fine even if it passes over a river square.
   // The river curves, so the water in a file can sit on either rank; the
   // side is judged against the water square in the destination's file.
-  // A piece past the river moves freely on its own side, but the river
-  // works on the way back as well as on the way there.
+  // A piece past the water in its own file moves freely on its own side,
+  // but the river works on the way back as well as on the way there.
   // - Backward Ls are full — except a backward jump from the far side
   //   that would land back across the water (that is a crossing too).
   // - A forward L that lands on a river square is a full L (entering the
@@ -376,27 +376,23 @@ function pseudoMoves(board,river,color,size){
   // piece can only reach INTO the water or stay on its own side, and a
   // piece in the water can only step out one square at a time (never
   // across the bend).
-  // The river's row in each file (one water square per file, by construction),
-  // and the two ranks it spans (its zone). A piece is fully past the river
-  // when it stands beyond the zone in its forward direction.
+  // The river's row in each file (one water square per file, by construction).
   const waterRows=new Array(size).fill(-1);
-  let zoneMin=-1, zoneMax=-1;
-  for(const sq of rv){ const rr=(sq/size)|0; waterRows[sq%size]=rr;
-    if(zoneMin<0||rr<zoneMin) zoneMin=rr; if(rr>zoneMax) zoneMax=rr; }
+  for(const sq of rv){ waterRows[sq%size]=(sq/size)|0; }
   const push=(from,to,extra)=>moves.push(Object.assign({from,to,double:false},extra||{}));
   const inB=(r,c)=>r>=0&&r<size&&c>=0&&c<size;
   for(let i=0;i<board.length;i++){ const p=board[i]; if(!p||p.c!==color) continue;
     const r=(i/size)|0, c=i%size;
     const dir=color==='w'?-1:1;
     // A move crosses the river when it would land on the opposite side of
-    // the water from where the piece stands. From the near side (or the
-    // zone) that means landing past the water in the destination's file;
-    // from the far side — a piece already fully past the river — it means
-    // landing on the near side of the water, back across. A piece past
-    // the river moves freely on its own side; the path never matters,
-    // only the destination's side of the water in its file. The river
-    // works on the way back as well as on the way there.
-    const isFar=rv.size>0&&(dir<0?r<zoneMin:r>zoneMax);
+    // the water from where the piece stands. From the near side that means
+    // landing past the water in the destination's file; from the far side
+    // — a piece already past the water in its own file — it means landing
+    // on the near side of the water, back across. A piece past the water
+    // moves freely on its own side; the path never matters, only the
+    // destination's side of the water in its file. The river works on the
+    // way back as well as on the way there.
+    const isFar=rv.size>0&&(dir<0?r<waterRows[c]:r>waterRows[c]);
     const crosses=(rr,cc)=>{ const w=waterRows[cc]; if(w<0) return false;
       return isFar?(dir<0?rr>w:rr<w):(dir<0?rr<w:rr>w); };
     // A forward diagonal step crosses the river's bend when the two squares
@@ -683,7 +679,7 @@ btnJoin:"Join room →",
 rulesTitle:"How Cavalaria works",
 rule1:"<b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).",
 rule2:"<b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.",
-rule3:"<b>The river blocks the way.</b> Only a piece already in the water is slowed by it. On dry land you jump with full, regular Ls — a move is only blocked if it would land on the opposite side of the water from where you stand, across the river either way. A jump that stays on your side is fine even if it passes over a river square, and a piece already past the river moves freely on its own side. A forward jump that lands in the water stays a full L; one that would land across the water is blocked, and shrinks to a single diagonal step into the water instead. Once in the water, you can only step out with a single diagonal step — a piece in the water never does a full L, front or back; a step across the river's bend is not allowed. Backward jumps are full — except a backward jump from the far side that would land back across the water. A pawn step, a first-move double-step and a diagonal capture obey the same rule — none may land across the water, even to kill. A rook or bishop slide stops at the first river square it meets, and cannot step across the water.",
+rule3:"<b>The river blocks the way.</b> Only a piece already in the water is slowed by it. On dry land you jump with full, regular Ls — a move is only blocked if it would land on the opposite side of the water from where you stand, across the river either way. A jump that stays on your side is fine even if it passes over a river square, and a piece already past the water in its own file moves freely on its own side. Whether you are past the river is judged file by file, against the water square in your own file — the river curves, so a piece can be past the water while still standing in the river's band. A forward jump that lands in the water stays a full L; one that would land across the water is blocked, and shrinks to a single diagonal step into the water instead. Once in the water, you can only step out with a single diagonal step — a piece in the water never does a full L, front or back; a step across the river's bend is not allowed. Backward jumps are full — except a backward jump from past the water that would land back across it. A pawn step, a first-move double-step and a diagonal capture obey the same rule — none may land across the water, even to kill. A rook or bishop slide stops at the first river square it meets, and cannot step across the water.",
 rule4:"<b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.",
 rule5:"<b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.",
 rule6:"<b>White always moves first</b>, in every mode — even Random.",
@@ -713,7 +709,7 @@ empowerRook:"<b>♜</b>Rook<br><small style=\"font-weight:500\">slides along ran
 empowerBishop:"<b>♝</b>Bishop<br><small style=\"font-weight:500\">slides along diagonals</small>",
 overRematch:"🐎 Rematch",
 overMenu:"Menu",
-footer:"Cavalaria v1.14 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
+footer:"Cavalaria v1.15 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
 statusToMove:"{color} to move",
 statusYourMove:"Your move.",
 statusWaitingOpp:"Waiting for opponent…",
@@ -822,7 +818,7 @@ btnJoin:"Entrar na sala →",
 rulesTitle:"Como funciona a Cavalaria",
 rule1:"<b>Cada peça é uma Cavalaria</b> — uma fusão de cavalo e peão. Cada uma se move das <b>duas</b> formas: como peão (1 casa para frente, 2 para frente no primeiro lance, captura 1 casa na diagonal para frente) <b>e</b> como cavalo (2 casas numa direção e 1 para o lado, pulando por cima das peças).",
 rule2:"<b>Vença eliminando o inimigo.</b> Não há reis nem xeque-mate — capture <b>todas</b> as peças do outro lado para vencer. Não há promoção nem en passant.",
-rule3:"<b>O rio bloqueia o caminho.</b> Só uma peça que já está na água é retardada por ele. Em terra seca você salta com Ls completos e normais — um movimento só é bloqueado se cair do lado oposto da água de onde você está, atravessando o rio em qualquer direção. Um salto que fica do seu lado está certo mesmo que passe por cima de uma casa de rio, e uma peça que já passou do rio se move livremente do seu lado. Um salto para frente que cai na água continua um L completo; um que cairia do outro lado da água é bloqueado, e encolhe para um único passo diagonal para dentro da água. Uma vez na água, você só pode sair com um único passo diagonal — uma peça na água nunca faz um L completo, nem para frente nem para trás; um passo através da curva do rio não é permitido. Os saltos para trás são completos — exceto um salto para trás do outro lado do rio que cairia de volta do outro lado da água. Um passo de peão, um passo duplo no primeiro movimento e uma captura na diagonal obedecem à mesma regra — nenhum pode cair do outro lado da água, nem para matar. Um deslize de torre ou bispo para na primeira casa de rio que encontrar, e não pode passar para o outro lado da água.",
+rule3:"<b>O rio bloqueia o caminho.</b> Só uma peça que já está na água é retardada por ele. Em terra seca você salta com Ls completos e normais — um movimento só é bloqueado se cair do lado oposto da água de onde você está, atravessando o rio em qualquer direção. Um salto que fica do seu lado está certo mesmo que passe por cima de uma casa de rio, e uma peça que já passou da água na sua própria coluna se move livremente do seu lado. Se você já passou do rio é julgado coluna por coluna, contra a casa de água na sua própria coluna — o rio faz curvas, então uma peça pode estar além da água enquanto ainda está na faixa do rio. Um salto para frente que cai na água continua um L completo; um que cairia do outro lado da água é bloqueado, e encolhe para um único passo diagonal para dentro da água. Uma vez na água, você só pode sair com um único passo diagonal — uma peça na água nunca faz um L completo, nem para frente nem para trás; um passo através da curva do rio não é permitido. Os saltos para trás são completos — exceto um salto para trás de além da água que cairia de volta do outro lado dela. Um passo de peão, um passo duplo no primeiro movimento e uma captura na diagonal obedecem à mesma regra — nenhum pode cair do outro lado da água, nem para matar. Um deslize de torre ou bispo para na primeira casa de rio que encontrar, e não pode passar para o outro lado da água.",
 rule4:"<b>A última unidade fica mais forte.</b> Quando um lado fica com apenas a sua última peça, o jogador escolhe um poder extra para ela: <b>♜ Torre</b> (desliza pelas fileiras e colunas) ou <b>♝ Bispo</b> (desliza pelas diagonais). Ela mantém os movimentos de cavalo e de peão.",
 rule5:"<b>As formações são cavalaria de verdade.</b> 16 peças por lado, em três fileiras. <b>Romana</b> — um bloco sólido, 8 + 6 + 2. <b>Mongol</b> — chifres bem abertos, 6 + 6 + 4.",
 rule6:"<b>As Brancas jogam sempre primeiro</b>, em todos os modos — até no Aleatório.",
@@ -852,7 +848,7 @@ empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">desliza pelas f
 empowerBishop:"<b>♝</b>Bispo<br><small style=\"font-weight:500\">desliza pelas diagonais</small>",
 overRematch:"🐎 Revanche",
 overMenu:"Menu",
-footer:"Cavalaria v1.14 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
+footer:"Cavalaria v1.15 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
 statusToMove:"Vez das {color}",
 statusYourMove:"Sua vez.",
 statusWaitingOpp:"Aguardando o oponente…",
@@ -961,7 +957,7 @@ btnJoin:"Entrar en la sala →",
 rulesTitle:"Cómo funciona Cavalaria",
 rule1:"<b>Cada pieza es una Cavalaria</b> — una fusión de caballo y peón. Cada una se mueve de <b>ambas</b> formas: como peón (1 casilla hacia adelante, 2 hacia adelante en su primer movimiento, captura 1 casilla en diagonal hacia adelante) <b>y</b> como caballo (2 casillas en una dirección y 1 hacia el lado, saltando por encima de las piezas).",
 rule2:"<b>Gana eliminando al enemigo.</b> No hay reyes ni jaque mate — captura <b>todas</b> las piezas del otro bando para ganar. No hay promoción ni captura al paso.",
-rule3:"<b>El río bloquea el paso.</b> Solo una pieza que ya está en el agua se ve frenada por él. En tierra seca saltas con Ls completas y normales — un movimiento solo se bloquea si caería al lado opuesto del agua desde donde estás, cruzando el río en cualquier dirección. Un salto que se queda de tu lado está bien aunque pase por encima de una casilla de río, y una pieza que ya cruzó el río se mueve libremente de su lado. Un salto hacia adelante que cae en el agua sigue siendo una L completa; uno que caería al otro lado del agua queda bloqueado, y se reduce a un único paso diagonal hacia el agua. Una vez en el agua, solo puedes salir con un único paso diagonal — una pieza en el agua nunca hace una L completa, ni hacia adelante ni hacia atrás; un paso a través de la curva del río no está permitido. Los saltos hacia atrás son completos — excepto un salto hacia atrás desde el otro lado que caería de vuelta al otro lado del agua. Un paso de peón, un doble paso en el primer movimiento y una captura en diagonal obedecen la misma regla — ninguno puede caer al otro lado del agua, ni siquiera para matar. Un deslizamiento de torre o alfil se detiene en la primera casilla de río que encuentre, y no puede pasar al otro lado del agua.",
+rule3:"<b>El río bloquea el paso.</b> Solo una pieza que ya está en el agua se ve frenada por él. En tierra seca saltas con Ls completas y normales — un movimiento solo se bloquea si caería al lado opuesto del agua desde donde estás, cruzando el río en cualquier dirección. Un salto que se queda de tu lado está bien aunque pase por encima de una casilla de río, y una pieza que ya pasó el agua en su propia columna se mueve libremente de su lado. Si ya cruzaste el río se juzga columna por columna, contra la casilla de agua de tu propia columna — el río serpentea, así que una pieza puede estar más allá del agua mientras sigue en la franja del río. Un salto hacia adelante que cae en el agua sigue siendo una L completa; uno que caería al otro lado del agua queda bloqueado, y se reduce a un único paso diagonal hacia el agua. Una vez en el agua, solo puedes salir con un único paso diagonal — una pieza en el agua nunca hace una L completa, ni hacia adelante ni hacia atrás; un paso a través de la curva del río no está permitido. Los saltos hacia atrás son completos — excepto un salto hacia atrás desde más allá del agua que caería de vuelta al otro lado de ella. Un paso de peón, un doble paso en el primer movimiento y una captura en diagonal obedecen la misma regla — ninguno puede caer al otro lado del agua, ni siquiera para matar. Un deslizamiento de torre o alfil se detiene en la primera casilla de río que encuentre, y no puede pasar al otro lado del agua.",
 rule4:"<b>La última unidad se hace más fuerte.</b> Cuando un bando se queda con su última pieza, su jugador elige un poder extra para ella: <b>♜ Torre</b> (se desliza por filas y columnas) o <b>♝ Alfil</b> (se desliza por diagonales). Conserva también sus movimientos de caballo y de peón.",
 rule5:"<b>Las formaciones son caballería de verdad.</b> 16 piezas por bando, en tres filas. <b>Romana</b> — un bloque sólido, 8 + 6 + 2. <b>Mongola</b> — cuernos bien abiertos, 6 + 6 + 4.",
 rule6:"<b>Las blancas mueven siempre primero</b>, en todos los modos — incluso en Aleatorio.",
@@ -991,7 +987,7 @@ empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">se desliza por 
 empowerBishop:"<b>♝</b>Alfil<br><small style=\"font-weight:500\">se desliza por diagonales</small>",
 overRematch:"🐎 Revancha",
 overMenu:"Menú",
-footer:"Cavalaria v1.14 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
+footer:"Cavalaria v1.15 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
 statusToMove:"Turno de las {color}",
 statusYourMove:"Tu turno.",
 statusWaitingOpp:"Esperando al oponente…",
@@ -1100,7 +1096,7 @@ btnJoin:"加入房间 →",
 rulesTitle:"Cavalaria 玩法",
 rule1:"<b>每枚棋子都是 Cavalaria</b>——骑士与兵的结合体。每枚棋子有<b>两种</b>走法：像兵一样（向前走 1 格，第一步可向前走 2 格，斜向前 1 格吃子）<b>和</b>像骑士一样（一个方向走 2 格、再向侧面走 1 格，可以跳过棋子）。",
 rule2:"<b>全歼敌军即可获胜。</b>没有王，也没有将死——吃掉对方<b>所有</b>棋子即可获胜。没有升变，也没有吃过路兵。",
-rule3:"<b>河流挡住了去路。</b>只有已经在水中的棋子才会被它拖慢。在干地上，你以完整、正常的 L 形跳跃——只有当移动会落在你所在位置的水对岸、跨越河流时才会被挡住。只要还留在自己这一边，即使跳过河格也没关系，而已经过了河的棋子可以在自己这边自由移动。向前跳跃若落在水中，它保持完整的 L 形；若会落在水对岸，则被挡住，并缩成一步斜走进入水中。一旦进入水中，只能一步斜走离开——水中的棋子永远不能做完整的 L 形跳跃，无论向前还是向后；横跨河流弯道的一步是不允许的。向后的跳跃始终完整——除非是从对岸向后跳回水对岸。一格、第一步两格和斜吃都遵守同样的规则——都不能落在水对岸，即使能吃子也不行。车或象的滑动会在遇到的第一个河流格停下，并且不能越过水面。",
+rule3:"<b>河流挡住了去路。</b>只有已经在水中的棋子才会被它拖慢。在干地上，你以完整、正常的 L 形跳跃——只有当移动会落在你所在位置的水对岸、跨越河流时才会被挡住。只要还留在自己这一边，即使跳过河格也没关系，而已经越过自己所在列的水的棋子可以在自己这边自由移动。是否已经过了河是按列来判断的，对照自己所在列的水格——河流是弯曲的，所以一个棋子可以在仍处于河流带内的同时已经越过了水。向前跳跃若落在水中，它保持完整的 L 形；若会落在水对岸，则被挡住，并缩成一步斜走进入水中。一旦进入水中，只能一步斜走离开——水中的棋子永远不能做完整的 L 形跳跃，无论向前还是向后；横跨河流弯道的一步是不允许的。向后的跳跃始终完整——除非是从水对岸向后跳回水对岸。一格、第一步两格和斜吃都遵守同样的规则——都不能落在水对岸，即使能吃子也不行。车或象的滑动会在遇到的第一个河流格停下，并且不能越过水面。",
 rule4:"<b>最后的棋子会变强。</b>当一方只剩下最后一枚棋子时，玩家可以为它选择一项额外能力：<b>♜ 车</b>（沿直线滑动）或 <b>♝ 象</b>（沿斜线滑动）。它同时保留骑士和兵的走法。",
 rule5:"<b>阵型是真正的骑兵阵型。</b>每方 16 枚棋子，分三排。<b>罗马</b>——密集方阵，8 + 6 + 2。<b>蒙古</b>——两翼张开，6 + 6 + 4。",
 rule6:"<b>白方永远先行</b>，所有模式都一样——随机模式也不例外。",
@@ -1130,7 +1126,7 @@ empowerRook:"<b>♜</b>车<br><small style=\"font-weight:500\">沿直线滑动</
 empowerBishop:"<b>♝</b>象<br><small style=\"font-weight:500\">沿斜线滑动</small>",
 overRematch:"🐎 再来一局",
 overMenu:"菜单",
-footer:"Cavalaria v1.14——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
+footer:"Cavalaria v1.15——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
 statusToMove:"{color}行棋",
 statusYourMove:"轮到你了。",
 statusWaitingOpp:"等待对手…",
@@ -1239,7 +1235,7 @@ btnJoin:"部屋に入る →",
 rulesTitle:"Cavalariaの遊び方",
 rule1:"<b>すべての駒はCavalaria</b>——ナイトとポーンの融合。各駒は<b>両方</b>の動きができる：ポーンとして（前に1マス、初手は前に2マス、斜め前に1マスで取る）<b>そして</b>ナイトとして（一方向に2マス、横に1マス、駒を飛び越える）。",
 rule2:"<b>敵を全滅させれば勝ち。</b>キングもチェックメイトもない——相手の駒を<b>すべて</b>取れば勝ち。成りもアンパッサンもない。",
-rule3:"<b>川は行く手を阻む。</b>すでに水の中にいる駒だけが、川に足を取られる。乾いた陸地では、完全で普通の L の跳躍をする——移動が阻まれるのは、自分のいる場所から水の反対側に着地する場合だけ、川をどちら向きに渡るときも。自分の側に留まる跳躍は、川のマスを飛び越えてもかまわないし、すでに川を渡った駒は自分の側で自由に動ける。前への跳躍が水に着地すれば L の跳躍はそのまま、もし水の向こうに着地するなら阻まれ、水への一歩の斜め移動に縮む。川の中では、一歩の斜め移動で出るだけ——川の中の駒は決して完全な L の跳躍をしない、前でも後ろでも；川の曲がり角を横切る一歩はできない。後ろへの跳躍は完全なまま——ただし、向こう岸から水の向こう側へ戻る跳躍は除く。1歩の前進、初手の2歩、斜めの取りも同じ規則——水の向こうに着地することはできない、取れる場合でも。ルークやビショップのスライドは、最初に出会った川のマスで止まり、水の向こうには進めない。",
+rule3:"<b>川は行く手を阻む。</b>すでに水の中にいる駒だけが、川に足を取られる。乾いた陸地では、完全で普通の L の跳躍をする——移動が阻まれるのは、自分のいる場所から水の反対側に着地する場合だけ、川をどちら向きに渡るときも。自分の側に留まる跳躍は、川のマスを飛び越えてもかまわないし、自分の列の水をすでに越えた駒は、自分の側で自由に動ける。川を越えたかどうかは列ごとに、自分の列の水のマスと比べて判断される——川は曲がっているので、駒は川の帯の中にいながら水を越えていることがある。前への跳躍が水に着地すれば L の跳躍はそのまま、もし水の向こうに着地するなら阻まれ、水への一歩の斜め移動に縮む。川の中では、一歩の斜め移動で出るだけ——川の中の駒は決して完全な L の跳躍をしない、前でも後ろでも；川の曲がり角を横切る一歩はできない。後ろへの跳躍は完全なまま——ただし、水の向こうから水の向こう側へ戻る跳躍は除く。1歩の前進、初手の2歩、斜めの取りも同じ規則——水の向こうに着地することはできない、取れる場合でも。ルークやビショップのスライドは、最初に出会った川のマスで止まり、水の向こうには進めない。",
 rule4:"<b>最後の1駒は強くなる。</b>片方が最後の1駒だけになったら、そのプレイヤーは追加の力を選ぶ：<b>♜ ルーク</b>（タテ・ヨコにスライド）または <b>♝ ビショップ</b>（ナナメにスライド）。ナイトとポーンの動きもそのまま残る。",
 rule5:"<b>布陣は本物の騎兵隊形。</b>各16駒、3列。<b>ローマ</b>——密集した塊、8 + 6 + 2。<b>モンゴル</b>——角を大きく広げて、6 + 6 + 4。",
 rule6:"<b>白が常に先手</b>、どのモードでも——ランダムでも。",
@@ -1269,7 +1265,7 @@ empowerRook:"<b>♜</b>ルーク<br><small style=\"font-weight:500\">タテ・�
 empowerBishop:"<b>♝</b>ビショップ<br><small style=\"font-weight:500\">ナナメにスライド</small>",
 overRematch:"🐎 再戦",
 overMenu:"メニュー",
-footer:"Cavalaria v1.14 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
+footer:"Cavalaria v1.15 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
 statusToMove:"{color}の番",
 statusYourMove:"あなたの番です。",
 statusWaitingOpp:"相手を待っています…",
@@ -1378,7 +1374,7 @@ btnJoin:"Rejoindre la salle →",
 rulesTitle:"Comment fonctionne Cavalaria",
 rule1:"<b>Chaque pièce est une Cavalaria</b> — une fusion de cavalier et de pion. Chacune se déplace des <b>deux</b> façons : comme un pion (1 case en avant, 2 en avant à son premier coup, capture 1 case en diagonale vers l'avant) <b>et</b> comme un cavalier (2 cases dans une direction et 1 sur le côté, en sautant par-dessus les pièces).",
 rule2:"<b>Gagnez en anéantissant l'ennemi.</b> Il n'y a ni rois ni échec et mat — capturez <b>toutes</b> les pièces du camp adverse pour gagner. Pas de promotion ni de prise en passant.",
-rule3:"<b>La rivière bloque le passage.</b> Seule une pièce déjà dans l'eau est ralentie par elle. Sur la terre sèche, vous sautez avec des L complets et normaux — un mouvement n'est bloqué que s'il atterrirait du côté opposé de l'eau par rapport à l'endroit où vous vous trouvez, en traversant la rivière dans un sens ou dans l'autre. Un saut qui reste de votre côté est permis même s'il passe au-dessus d'une case de rivière, et une pièce déjà passée de l'autre côté de la rivière se déplace librement de son côté. Un saut vers l'avant qui atterrit dans l'eau reste un L complet ; un saut qui atterrirait de l'autre côté de l'eau est bloqué, et se réduit à un unique pas diagonal dans l'eau. Une fois dans l'eau, vous ne pouvez en sortir qu'avec un unique pas diagonal — une pièce dans l'eau ne fait jamais un L complet, ni vers l'avant ni vers l'arrière ; un pas à travers le coude de la rivière n'est pas autorisé. Les sauts vers l'arrière sont toujours entiers — sauf un saut vers l'arrière depuis l'autre rive qui atterrirait de l'autre côté de l'eau. Un pas de pion, un double pas au premier coup et une capture en diagonale obéissent à la même règle — aucun ne peut atterrir de l'autre côté de l'eau, même pour prendre. Un glissement de tour ou de fou s'arrête à la première case de rivière rencontrée, et ne peut pas passer de l'autre côté de l'eau.",
+rule3:"<b>La rivière bloque le passage.</b> Seule une pièce déjà dans l'eau est ralentie par elle. Sur la terre sèche, vous sautez avec des L complets et normaux — un mouvement n'est bloqué que s'il atterrirait du côté opposé de l'eau par rapport à l'endroit où vous vous trouvez, en traversant la rivière dans un sens ou dans l'autre. Un saut qui reste de votre côté est permis même s'il passe au-dessus d'une case de rivière, et une pièce déjà passée de l'autre côté de l'eau dans sa propre colonne se déplace librement de son côté. Savoir si vous avez passé la rivière se juge colonne par colonne, par rapport à la case d'eau de votre propre colonne — la rivière serpente, donc une pièce peut être au-delà de l'eau tout en restant dans la bande de la rivière. Un saut vers l'avant qui atterrit dans l'eau reste un L complet ; un saut qui atterrirait de l'autre côté de l'eau est bloqué, et se réduit à un unique pas diagonal dans l'eau. Une fois dans l'eau, vous ne pouvez en sortir qu'avec un unique pas diagonal — une pièce dans l'eau ne fait jamais un L complet, ni vers l'avant ni vers l'arrière ; un pas à travers le coude de la rivière n'est pas autorisé. Les sauts vers l'arrière sont toujours entiers — sauf un saut vers l'arrière depuis l'au-delà de l'eau qui atterrirait de l'autre côté de l'eau. Un pas de pion, un double pas au premier coup et une capture en diagonale obéissent à la même règle — aucun ne peut atterrir de l'autre côté de l'eau, même pour prendre. Un glissement de tour ou de fou s'arrête à la première case de rivière rencontrée, et ne peut pas passer de l'autre côté de l'eau.",
 rule4:"<b>La dernière unité devient plus forte.</b> Quand un camp n'a plus que sa toute dernière pièce, son joueur choisit un pouvoir supplémentaire pour elle : <b>♜ Tour</b> (glisse le long des rangées et des colonnes) ou <b>♝ Fou</b> (glisse le long des diagonales). Elle garde aussi ses déplacements de cavalier et de pion.",
 rule5:"<b>Les formations sont de la vraie cavalerie.</b> 16 pièces par camp, sur trois rangées. <b>Romain</b> — un bloc solide, 8 + 6 + 2. <b>Mongol</b> — les cornes bien ouvertes, 6 + 6 + 4.",
 rule6:"<b>Les Blancs jouent toujours en premier</b>, dans tous les modes — même en Aléatoire.",
@@ -1408,7 +1404,7 @@ empowerRook:"<b>♜</b>Tour<br><small style=\"font-weight:500\">glisse le long d
 empowerBishop:"<b>♝</b>Fou<br><small style=\"font-weight:500\">glisse le long des diagonales</small>",
 overRematch:"🐎 Revanche",
 overMenu:"Menu",
-footer:"Cavalaria v1.14 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
+footer:"Cavalaria v1.15 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
 statusToMove:"Aux {color} de jouer",
 statusYourMove:"À vous de jouer.",
 statusWaitingOpp:"En attente de l'adversaire…",
@@ -1517,7 +1513,7 @@ btnJoin:"방 참가 →",
 rulesTitle:"Cavalaria 하는 방법",
 rule1:"<b>모든 기물은 Cavalaria입니다</b>——나이트와 폰의 융합체. 각 기물은 <b>두 가지</b> 방법으로 움직입니다. 폰처럼（앞으로 1칸, 첫 수에는 앞으로 2칸, 대각선 앞으로 1칸 잡기）<b>그리고</b> 나이트처럼（한 방향으로 2칸, 옆으로 1칸, 기물을 뛰어넘기）.",
 rule2:"<b>적을 전멸시키면 승리합니다.</b> 킹도 없고 체크메이트도 없습니다——상대 기물을 <b>모두</b> 잡으면 승리합니다. 승격도 앙파상도 없습니다.",
-rule3:"<b>강이 길을 막습니다.</b> 이미 물속에 있는 기물만 강에 의해 느려집니다. 마른 땅에서는 완전하고 정상적인 L 점프를 합니다——이동이 막히는 것은 서 있는 곳에서 물 건너편에 착지할 때뿐입니다, 어느 방향으로 강을 건너든. 자기 쪽에 머무는 점프는 강 칸을 뛰어넘어도 괜찮고, 이미 강을 건넌 기물은 자기 쪽에서 자유롭게 움직입니다. 앞으로의 점프가 물에 착지하면 완전한 L 점프가 유지되고, 물 건너편에 착지하게 되면 막히고 물속으로의 한 칸 대각선 이동으로 줄어듭니다. 강 안에 들어간 뒤에는, 한 칸 대각선 이동으로만 나올 수 있습니다——물속의 기물은 앞으로든 뒤로든 완전한 L 점프를 절대 하지 않습니다；강의 굽이를 가로지르는 이동은 허용되지 않습니다. 뒤로의 점프는 항상 완전합니다——단, 건너편에서 물 건너편으로 되돌아가는 점프는 제외합니다. 한 칸 전진, 첫 수의 두 칸 전진, 대각선으로 잡는 것도 같은 규칙을 따릅니다——물 건너편에 착지할 수 없습니다, 잡을 수 있어도 안 됩니다. 룩이나 비숍의 슬라이드는 만나는 첫 번째 강 칸에서 멈추고, 물을 넘어갈 수 없습니다.",
+rule3:"<b>강이 길을 막습니다.</b> 이미 물속에 있는 기물만 강에 의해 느려집니다. 마른 땅에서는 완전하고 정상적인 L 점프를 합니다——이동이 막히는 것은 서 있는 곳에서 물 건너편에 착지할 때뿐입니다, 어느 방향으로 강을 건너든. 자기 쪽에 머무는 점프는 강 칸을 뛰어넘어도 괜찮고, 자기 열의 물을 이미 건넌 기물은 자기 쪽에서 자유롭게 움직입니다. 강을 건넜는지는 열마다, 자기 열의 강 칸과 비교해 판단합니다——강은 굽이치므로, 기물은 강의 띠 안에 있으면서도 물을 건넌 상태일 수 있습니다. 앞으로의 점프가 물에 착지하면 완전한 L 점프가 유지되고, 물 건너편에 착지하게 되면 막히고 물속으로의 한 칸 대각선 이동으로 줄어듭니다. 강 안에 들어간 뒤에는, 한 칸 대각선 이동으로만 나올 수 있습니다——물속의 기물은 앞으로든 뒤로든 완전한 L 점프를 절대 하지 않습니다；강의 굽이를 가로지르는 이동은 허용되지 않습니다. 뒤로의 점프는 항상 완전합니다——단, 물 건너편에서 물 건너편으로 되돌아가는 점프는 제외합니다. 한 칸 전진, 첫 수의 두 칸 전진, 대각선으로 잡는 것도 같은 규칙을 따릅니다——물 건너편에 착지할 수 없습니다, 잡을 수 있어도 안 됩니다. 룩이나 비숍의 슬라이드는 만나는 첫 번째 강 칸에서 멈추고, 물을 넘어갈 수 없습니다.",
 rule4:"<b>마지막 기물은 강해집니다.</b> 한쪽이 마지막 기물 하나만 남으면, 플레이어는 추가 능력을 선택합니다. <b>♜ 룩</b>（가로·세로로 미끄러지듯 이동）또는 <b>♝ 비숍</b>（대각선으로 이동）. 나이트와 폰의 움직임도 그대로 유지합니다.",
 rule5:"<b>진형은 진짜 기병 진형입니다.</b> 양쪽 16개 기물, 세 줄. <b>로마</b>——단단한 블록, 8 + 6 + 2. <b>몽골</b>——뿔을 넓게 벌린 형태, 6 + 6 + 4.",
 rule6:"<b>백이 항상 먼저 둡니다</b>. 모든 모드에서——무작위 모드에서도 마찬가지입니다.",
@@ -1547,7 +1543,7 @@ empowerRook:"<b>♜</b>룩<br><small style=\"font-weight:500\">가로·세로로
 empowerBishop:"<b>♝</b>비숍<br><small style=\"font-weight:500\">대각선으로 이동</small>",
 overRematch:"🐎 재대결",
 overMenu:"메뉴",
-footer:"Cavalaria v1.14——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
+footer:"Cavalaria v1.15——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
 statusToMove:"{color} 차례",
 statusYourMove:"당신의 차례입니다.",
 statusWaitingOpp:"상대를 기다리는 중…",

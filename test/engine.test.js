@@ -212,15 +212,19 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   const stF = E.newGame('main', 1, { board: boardWith([[51, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvF = movesFrom(E.legalMoves(stF), 51);
   check('two ranks away: full 2+1 jump into the river (c4/e4)', [34, 36].every(x => mvF.includes(x)));
-  // Dry square INSIDE the zone (c5, 26 — not a river square): only single
-  // diagonal steps, no 2+1 leap over the water to the opposite bank.
+  // Dry square past the water in its own file (c5, 26 — not a river
+  // square, but north of the water at c4): it is already on the far side,
+  // so it moves freely on its side — pawn step/double and forward Ls are
+  // offered, and the backward Ls that would land back across the water
+  // (a4/a3/e3) are blocked. Only the backward L into the water (e4) stays.
+  // (This reverses the v1.11 dry-zone verdict: that was written for a
+  // piece still on the near side; a piece past the water is free.)
   const stD = E.newGame('main', 1, { board: boardWith([[26, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvD = movesFrom(E.legalMoves(stD), 26);
-  check('dry zone square: 4 backward Ls only, NO pawn step/double onto the far side (4 moves)', mvD.length === 4 && [32, 36, 41, 43].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
-  check('dry zone square: a dry pawn cannot step or double onto the far side (c6/c7)', [18, 10].every(x => !mvD.includes(x)));
-  check('dry zone square: the backward Ls are offered (a4/e4/a3/e3)', [32, 36, 41, 43].every(x => mvD.includes(x)));
-  check('dry zone square: a dry piece gets no 1+1 diagonal steps (b6/d6/b4/d4)', [17, 19, 33, 35].every(x => !mvD.includes(x)));
-  check('dry zone square: NO forward L that leaves the river', [8, 12, 40, 44, 16, 20].every(x => !mvD.includes(x)));
+  check('past the water in its file: pawn step/double + forward Ls offered (7 moves)', mvD.length === 7 && [18, 10, 9, 11, 16, 20, 36].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
+  check('past the water in its file: backward Ls back across the water are blocked (a4/a3/e3)', [32, 41, 43].every(x => !mvD.includes(x)));
+  check('past the water in its file: backward L into the water stays (e4)', mvD.includes(36));
+  check('past the water in its file: a dry piece gets no 1+1 diagonal steps (b6/d6/b4/d4)', [17, 19, 33, 35].every(x => !mvD.includes(x)));
   // Slides stop at the water: empowered rook on d2 (51) slides up the file
   // to d3, then d4 (river) is the last square — never d5+.
   const stR = E.newGame('main', 1, { board: boardWith([[51, C('w', { empowered: 'R' })], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
@@ -334,15 +338,32 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   check('black d5 past the river: forward Ls + pawn step south (c3/e3/b4/f4/d4)', [110, 112, 97, 101, 99].every(x => mvB5.includes(x)), 'got ' + mvB5.join(','));
   check('black d5 past the river: never crosses back north to c7', !mvB5.includes(62), 'got ' + mvB5.join(','));
   check('black d5 past the river: 8 moves total', mvB5.length === 8, 'got ' + mvB5.join(','));
-  // A pawn capture across the river is blocked even to kill: White on d5
-  // (27, dry zone) with Black on c6 (18) and e6 (20) — both are on the far
-  // side, so the captures, the step to d6 (19) and the double to d7 (11)
-  // are all forbidden. Only the 4 backward Ls remain.
+  // Regression, Nov 27 2026 (screenshot 8, 12x12, river a7 e7 f7 h7 i7 j7
+  // k7 l7 b6 c6 d6 g6): White on b7 (61, hasMoved) — past the water in its
+  // own file (b6), but still in the top row of the river's zone. v1.14's
+  // zone test missed it: it could only jump backward into the river and
+  // could not move forward at all. Now the far side is judged per file:
+  // it moves forward freely and can never jump back across in one round.
+  const stB7 = E.newGame('random', 1, { board: boardWith([[61, C('w', { hasMoved: true })], [118, C('w')], [0, C('b')], [23, C('b')]]), river: D8_RIVER, turn: 'w', size: 12 });
+  const mvB7 = movesFrom(E.legalMoves(stB7), 61);
+  check('b7 past the water in its file: forward Ls + pawn step offered (a9/c9/d8/b8)', [36, 38, 51, 49].every(x => mvB7.includes(x)), 'got ' + mvB7.join(','));
+  check('b7 past the water in its file: never jumps back across to the near side (a5/c5)', [84, 86].every(x => !mvB7.includes(x)), 'got ' + mvB7.join(','));
+  check('b7 past the water in its file: backward L into the water stays (d6)', mvB7.includes(75));
+  check('b7 past the water in its file: 5 moves total', mvB7.length === 5, 'got ' + mvB7.join(','));
+  // A pawn capture ON the far side is allowed even to kill: White on d5
+  // (27, past the water at d4) with Black on c6 (18) and e6 (20) — both
+  // are on the far side too, so the captures, the step to d6 (19) and the
+  // double to d7 (11) are all offered. Only the backward Ls that would
+  // land back across the water are blocked; the backward L into the water
+  // (f4) stays. (Reverses the v1.11 verdict, which treated a far-side
+  // piece as still bound by the near-side rule.)
   const stCap = E.newGame('main', 1, { board: boardWith([[27, C('w')], [56, C('w')], [18, C('b')], [20, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvCap = movesFrom(E.legalMoves(stCap), 27);
-  check('pawn capture across the river is blocked even to kill (c6/e6)', [18, 20].every(x => !mvCap.includes(x)), 'got ' + mvCap.join(','));
-  check('pawn step/double across the river is blocked (d6/d7)', [19, 11].every(x => !mvCap.includes(x)));
-  check('pawn capture across the river: 4 moves total', mvCap.length === 4, 'got ' + mvCap.join(','));
+  check('pawn capture on the far side is allowed even to kill (c6/e6)', [18, 20].every(x => mvCap.includes(x)), 'got ' + mvCap.join(','));
+  check('pawn step/double on the far side is allowed (d6/d7)', [19, 11].every(x => mvCap.includes(x)));
+  check('pawn capture on the far side: backward Ls back across are blocked (c3/e3/b4)', [42, 44, 33].every(x => !mvCap.includes(x)), 'got ' + mvCap.join(','));
+  check('pawn capture on the far side: backward L into the water stays (f4)', mvCap.includes(37));
+  check('pawn capture on the far side: 9 moves total', mvCap.length === 9, 'got ' + mvCap.join(','));
   // A bishop cannot slip diagonally between two staggered river squares:
   // White bishop on b5 (85, 12x12, river a7 b7 c7 d6 e6 f6 g6 h7 i6 j6 k7
   // l7) slides up-right through c6 (74) and d5 (63) — both dry zone
