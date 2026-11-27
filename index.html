@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Cavalaria v1.9.1 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
+<!-- Cavalaria v1.9.2 — cavalry chess: every piece is a knight+pawn, river terrain, last-unit power, 8x8 + 12x12 boards, piece art is Henrique's PNGs (outline white, solid black) embedded as data URIs, river drawn as a flowing illustrated river, White always moves first -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -169,7 +169,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <ul>
       <li data-i18n-html="rule1"><b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).</li>
       <li data-i18n-html="rule2"><b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.</li>
-      <li data-i18n-html="rule3"><b>The river blocks the way.</b> Nothing jumps over it. From the bank, your forward jumps shrink to a single diagonal step into the water — sideways and backward jumps stay full. Once inside the river, you can complete the L as long as you stay inside it; stepping out is a single diagonal step. A rook or bishop slide stops at the first river square it meets. To cross, step in, then step out the other side.</li>
+      <li data-i18n-html="rule3"><b>The river blocks the way.</b> Nothing jumps over it — but only forward: backward jumps are always full. From the bank, a forward jump is judged on where it lands: if it lands in the water it stays a full L, and if it would land on dry land past the water it shrinks to a single diagonal step into the water. Once inside the river, you can complete the L as long as you stay inside it; stepping out is a single diagonal step — except a step across the river's bend, which is not allowed at all. A rook or bishop slide stops at the first river square it meets. To cross, step in, then step out the other side.</li>
       <li data-i18n-html="rule4"><b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.</li>
       <li data-i18n-html="rule5"><b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.</li>
       <li data-i18n-html="rule6"><b>White always moves first</b>, in every mode — even Random.</li>
@@ -223,7 +223,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
   </div>
 </div>
 
-<footer data-i18n-html="footer"> Cavalaria v1.9.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer data-i18n-html="footer"> Cavalaria v1.9.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -337,20 +337,25 @@ function pseudoMoves(board,river,color,size){
   const moves=[];
   const rv=riverSet(river);
   // The river is a wall of water, two ranks wide (the middle two ranks:
-  // ranks 4-5 on 8x8, 6-7 on 12x12). Nothing jumps over it.
-  // - Inside the river zone (any square on those two ranks, wet or dry):
-  //   you can complete the L as long as you stay inside the zone — the
-  //   full 2+1 to another zone square is allowed. Stepping OUT of the
-  //   zone is a single diagonal step (1+1) only, so you can never leap
-  //   out of the river to the opposite bank.
-  // - On the bank facing the river (one rank outside the zone, on your own
-  //   side): only the FORWARD Ls shrink to mini Ls (1+1), so you step INTO
-  //   the river instead of over it; lateral and backward Ls stay full 2+1.
+  // ranks 4-5 on 8x8, 6-7 on 12x12). Nothing jumps over it — but only
+  // FORWARD: backward jumps are always full, retreat is never restricted.
+  // The rules look at the actual water squares, not just the ranks, because
+  // the river curves: the water square in a file can sit on either rank.
+  // - On the bank facing the river: each forward L is judged on its own
+  //   landing square. If the full L lands on a river square, it stays a
+  //   full L; if it would land on dry land past the water, it shrinks to
+  //   a mini L (1+1) into the water instead.
+  // - Inside the river zone: you can complete the L as long as you stay
+  //   inside the zone. Stepping OUT is a single diagonal step (1+1) only.
+  //   But a forward diagonal step is forbidden when it crosses the river's
+  //   bend: the two squares it steps between are both river squares, so
+  //   the step would jump over the water instead of landing in it.
   // - A rook/bishop slide stops at the first river square it meets: entering
   //   the river is always the last square of that piece's turn.
-  // Together these guarantee no move can start on one side of the river and
-  // end on the other: from outside the zone a 2+1 can only reach INTO the
-  // zone, and from inside it you can only step out one diagonal at a time.
+  // Together these guarantee no forward move can start on one side of the
+  // river and end on the other: from outside the zone a forward 2+1 can
+  // only reach INTO the zone, and from inside it you can only step out
+  // one diagonal at a time (and never across the bend).
   const bandRows=[...rv].map(x=>(x/size)|0);
   const bandMin=bandRows.length?Math.min(...bandRows):-1;
   const bandMax=bandRows.length?Math.max(...bandRows):-1;
@@ -370,21 +375,45 @@ function pseudoMoves(board,river,color,size){
     for(const dc of [-1,1]){ const cc=c+dc;
       if(inB(r1,cc)){ const t=board[r1*size+cc]; if(t&&t.c!==color) push(i,r1*size+cc); }
     }
-    // ---- knight component: 2+1 jump, shrunk by the river (see above)
+    // ---- knight component: 2+1 jump, shaped by the river (see above).
+    // The river restricts only FORWARD movement; backward jumps are always
+    // full. Each forward jump is judged on its own landing square.
     const inBand=bandMin>=0&&r>=bandMin&&r<=bandMax;
     const bankFront=bandMin>=0&&(color==='w'?r===bandMax+1:r===bandMin-1);
     const fullL=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-    let offs;
-    if(inBand){
-      // In the river: single diagonal steps, PLUS the full L to any square
-      // that stays inside the river zone (v1.9.1). A 2-row jump always
-      // leaves the two-rank zone, so in practice these are the lateral Ls
-      // toward the zone's other rank.
-      offs=[[-1,-1],[-1,1],[1,-1],[1,1]];
-      for(const [dr,dc] of fullL){ const rr=r+dr; if(rr>=bandMin&&rr<=bandMax) offs.push([dr,dc]); }
+    // A forward diagonal step crosses the river's bend when the two squares
+    // it steps between are both river squares (the river flows along that
+    // diagonal, so the step would jump over the water). Backward steps are
+    // never blocked: retreat is always free.
+    const diagBlocked=(rr,cc)=>rv.has(r*size+cc)&&rv.has(rr*size+c);
+    let offs=[];
+    for(const [dr,dc] of fullL){
+      const rr=r+dr, cc=c+dc;
+      if(!inB(rr,cc)) continue;
+      if(dr*dir<0){ offs.push([dr,dc]); continue; } // backward: always full
+      if(Math.abs(dr)===2){
+        if(bankFront){
+          if(rv.has(rr*size+cc)) offs.push([dr,dc]); // lands in the water: full L
+          else if(!diagBlocked(r+dir,c+dc)) offs.push([dir,dc]); // else shrink to a mini L
+        } else if(inBand){
+          if(rr>=bandMin&&rr<=bandMax) offs.push([dr,dc]); // stays inside: full L
+          // leaving the zone is a single diagonal step (added below)
+        } else offs.push([dr,dc]);
+      } else {
+        // forward lateral (1,+-2)
+        if(!inBand||(rr>=bandMin&&rr<=bandMax)) offs.push([dr,dc]);
+      }
     }
-    else if(bankFront) offs=fullL.map(([dr,dc])=>dr===2*dir?[dir,dc]:[dr,dc]);
-    else offs=fullL;
+    // Single diagonal steps, inside the zone only (the step out / within).
+    // Forward ones are banned when they cross the river's bend.
+    if(inBand){
+      for(const [dr,dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]){
+        const rr=r+dr, cc=c+dc;
+        if(!inB(rr,cc)) continue;
+        if(dr*dir>0&&diagBlocked(rr,cc)) continue;
+        offs.push([dr,dc]);
+      }
+    }
     for(const [dr,dc] of offs){ const rr=r+dr, cc=c+dc; if(!inB(rr,cc)) continue;
       const t=board[rr*size+cc]; if(!t||t.c!==color) push(i,rr*size+cc); }
     // ---- empowered slides: stop at the first river square met (it is the
@@ -601,7 +630,7 @@ btnJoin:"Join room →",
 rulesTitle:"How Cavalaria works",
 rule1:"<b>Every piece is a Cavalaria</b> — a fusion of knight and pawn. Each one moves <b>both</b> ways: as a pawn (1 square forward, 2 forward on its first move, captures 1 square diagonally forward) <b>and</b> as a knight (2 squares in one direction and 1 to the side, jumping over pieces).",
 rule2:"<b>Win by wiping the enemy out.</b> There are no kings and no checkmate — capture <b>all</b> of the other side's pieces to win. There is no promotion and no en passant.",
-rule3:"<b>The river blocks the way.</b> Nothing jumps over it. From the bank, your forward jumps shrink to a single diagonal step into the water — sideways and backward jumps stay full. Once inside the river, you can complete the L as long as you stay inside it; stepping out is a single diagonal step. A rook or bishop slide stops at the first river square it meets. To cross, step in, then step out the other side.",
+rule3:"<b>The river blocks the way.</b> Nothing jumps over it — but only forward: backward jumps are always full. From the bank, a forward jump is judged on where it lands: if it lands in the water it stays a full L, and if it would land on dry land past the water it shrinks to a single diagonal step into the water. Once inside the river, you can complete the L as long as you stay inside it; stepping out is a single diagonal step — except a step across the river's bend, which is not allowed at all. A rook or bishop slide stops at the first river square it meets. To cross, step in, then step out the other side.",
 rule4:"<b>Last unit standing gets stronger.</b> When a side is down to its very last piece, its player picks an extra power for it: <b>♜ Rook</b> (slides along ranks and files) or <b>♝ Bishop</b> (slides along diagonals). It keeps its knight and pawn moves too.",
 rule5:"<b>Formations are real cavalry.</b> 16 pieces a side, in three ranks. <b>Roman</b> — a solid block, 8 + 6 + 2. <b>Mongolian</b> — horns out wide, 6 + 6 + 4.",
 rule6:"<b>White always moves first</b>, in every mode — even Random.",
@@ -631,7 +660,7 @@ empowerRook:"<b>♜</b>Rook<br><small style=\"font-weight:500\">slides along ran
 empowerBishop:"<b>♝</b>Bishop<br><small style=\"font-weight:500\">slides along diagonals</small>",
 overRematch:"🐎 Rematch",
 overMenu:"Menu",
-footer:"Cavalaria v1.9.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
+footer:"Cavalaria v1.9.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
 statusToMove:"{color} to move",
 statusYourMove:"Your move.",
 statusWaitingOpp:"Waiting for opponent…",
@@ -740,7 +769,7 @@ btnJoin:"Entrar na sala →",
 rulesTitle:"Como funciona a Cavalaria",
 rule1:"<b>Cada peça é uma Cavalaria</b> — uma fusão de cavalo e peão. Cada uma se move das <b>duas</b> formas: como peão (1 casa para frente, 2 para frente no primeiro lance, captura 1 casa na diagonal para frente) <b>e</b> como cavalo (2 casas numa direção e 1 para o lado, pulando por cima das peças).",
 rule2:"<b>Vença eliminando o inimigo.</b> Não há reis nem xeque-mate — capture <b>todas</b> as peças do outro lado para vencer. Não há promoção nem en passant.",
-rule3:"<b>O rio bloqueia o caminho.</b> Nada pula por cima dele. Da margem, seus saltos para frente encolhem para um único passo diagonal para dentro da água — os saltos laterais e para trás continuam completos. Uma vez dentro do rio, você pode completar o L desde que continue dentro dele; sair é um único passo diagonal. Um deslize de torre ou bispo para na primeira casa de rio que encontrar. Para atravessar, entre, depois saia do outro lado.",
+rule3:"<b>O rio bloqueia o caminho.</b> Nada pula por cima dele — mas só para frente: os saltos para trás são sempre completos. Da margem, um salto para frente é julgado por onde ele cai: se cair na água, continua um L completo; se cair em terra seca além da água, encolhe para um único passo diagonal para dentro da água. Uma vez dentro do rio, você pode completar o L desde que continue dentro dele; sair é um único passo diagonal — exceto um passo através da curva do rio, que não é permitido. Um deslize de torre ou bispo para na primeira casa de rio que encontrar. Para atravessar, entre, depois saia do outro lado.",
 rule4:"<b>A última unidade fica mais forte.</b> Quando um lado fica com apenas a sua última peça, o jogador escolhe um poder extra para ela: <b>♜ Torre</b> (desliza pelas fileiras e colunas) ou <b>♝ Bispo</b> (desliza pelas diagonais). Ela mantém os movimentos de cavalo e de peão.",
 rule5:"<b>As formações são cavalaria de verdade.</b> 16 peças por lado, em três fileiras. <b>Romana</b> — um bloco sólido, 8 + 6 + 2. <b>Mongol</b> — chifres bem abertos, 6 + 6 + 4.",
 rule6:"<b>As Brancas jogam sempre primeiro</b>, em todos os modos — até no Aleatório.",
@@ -770,7 +799,7 @@ empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">desliza pelas f
 empowerBishop:"<b>♝</b>Bispo<br><small style=\"font-weight:500\">desliza pelas diagonais</small>",
 overRematch:"🐎 Revanche",
 overMenu:"Menu",
-footer:"Cavalaria v1.9.1 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
+footer:"Cavalaria v1.9.2 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.<br>Códigos de sala e pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
 statusToMove:"Vez das {color}",
 statusYourMove:"Sua vez.",
 statusWaitingOpp:"Aguardando o oponente…",
@@ -879,7 +908,7 @@ btnJoin:"Entrar en la sala →",
 rulesTitle:"Cómo funciona Cavalaria",
 rule1:"<b>Cada pieza es una Cavalaria</b> — una fusión de caballo y peón. Cada una se mueve de <b>ambas</b> formas: como peón (1 casilla hacia adelante, 2 hacia adelante en su primer movimiento, captura 1 casilla en diagonal hacia adelante) <b>y</b> como caballo (2 casillas en una dirección y 1 hacia el lado, saltando por encima de las piezas).",
 rule2:"<b>Gana eliminando al enemigo.</b> No hay reyes ni jaque mate — captura <b>todas</b> las piezas del otro bando para ganar. No hay promoción ni captura al paso.",
-rule3:"<b>El río bloquea el paso.</b> Nada salta por encima de él. Desde la orilla, tus saltos hacia adelante se reducen a un único paso diagonal hacia el agua — los saltos laterales y hacia atrás siguen completos. Una vez dentro del río, puedes completar la L mientras te quedes dentro de él; salir es un único paso diagonal. Un deslizamiento de torre o alfil se detiene en la primera casilla de río que encuentre. Para cruzar, entra y luego sal por el otro lado.",
+rule3:"<b>El río bloquea el paso.</b> Nada salta por encima de él — pero solo hacia adelante: los saltos hacia atrás son siempre completos. Desde la orilla, un salto hacia adelante se juzga por donde cae: si cae en el agua sigue siendo una L completa, y si caería en tierra seca más allá del agua se reduce a un único paso diagonal hacia el agua. Una vez dentro del río, puedes completar la L mientras te quedes dentro de él; salir es un único paso diagonal — excepto un paso a través de la curva del río, que no está permitido. Un deslizamiento de torre o alfil se detiene en la primera casilla de río que encuentre. Para cruzar, entra y luego sal por el otro lado.",
 rule4:"<b>La última unidad se hace más fuerte.</b> Cuando un bando se queda con su última pieza, su jugador elige un poder extra para ella: <b>♜ Torre</b> (se desliza por filas y columnas) o <b>♝ Alfil</b> (se desliza por diagonales). Conserva también sus movimientos de caballo y de peón.",
 rule5:"<b>Las formaciones son caballería de verdad.</b> 16 piezas por bando, en tres filas. <b>Romana</b> — un bloque sólido, 8 + 6 + 2. <b>Mongola</b> — cuernos bien abiertos, 6 + 6 + 4.",
 rule6:"<b>Las blancas mueven siempre primero</b>, en todos los modos — incluso en Aleatorio.",
@@ -909,7 +938,7 @@ empowerRook:"<b>♜</b>Torre<br><small style=\"font-weight:500\">se desliza por 
 empowerBishop:"<b>♝</b>Alfil<br><small style=\"font-weight:500\">se desliza por diagonales</small>",
 overRematch:"🐎 Revancha",
 overMenu:"Menú",
-footer:"Cavalaria v1.9.1 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
+footer:"Cavalaria v1.9.2 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.<br>Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC) — sin servidor de juego, sin coste, sin registro.",
 statusToMove:"Turno de las {color}",
 statusYourMove:"Tu turno.",
 statusWaitingOpp:"Esperando al oponente…",
@@ -1018,7 +1047,7 @@ btnJoin:"加入房间 →",
 rulesTitle:"Cavalaria 玩法",
 rule1:"<b>每枚棋子都是 Cavalaria</b>——骑士与兵的结合体。每枚棋子有<b>两种</b>走法：像兵一样（向前走 1 格，第一步可向前走 2 格，斜向前 1 格吃子）<b>和</b>像骑士一样（一个方向走 2 格、再向侧面走 1 格，可以跳过棋子）。",
 rule2:"<b>全歼敌军即可获胜。</b>没有王，也没有将死——吃掉对方<b>所有</b>棋子即可获胜。没有升变，也没有吃过路兵。",
-rule3:"<b>河流挡住了去路。</b>任何棋子都不能跳过它。从岸边出发，向前的跳跃会缩成一步斜走进入水中——横向和向后的跳跃保持不变。进入河流后，只要还留在河里，就可以完成整个 L 形跳跃；要离开河流则只能一步斜走。车或象的滑动会在遇到的第一个河流格停下。要过河，先进入水中，再从另一边出来。",
+rule3:"<b>河流挡住了去路。</b>任何棋子都不能跳过它——但只限向前：向后的跳跃始终完整。从岸边出发，向前的跳跃按落点判断：如果落在水中，它保持完整的 L 形；如果会落在水对岸的干地上，则缩成一步斜走进入水中。进入河流后，只要还留在河里，就可以完成整个 L 形跳跃；要离开河流则只能一步斜走——但横跨河流弯道的一步是完全不允许的。车或象的滑动会在遇到的第一个河流格停下。要过河，先进入水中，再从另一边出来。",
 rule4:"<b>最后的棋子会变强。</b>当一方只剩下最后一枚棋子时，玩家可以为它选择一项额外能力：<b>♜ 车</b>（沿直线滑动）或 <b>♝ 象</b>（沿斜线滑动）。它同时保留骑士和兵的走法。",
 rule5:"<b>阵型是真正的骑兵阵型。</b>每方 16 枚棋子，分三排。<b>罗马</b>——密集方阵，8 + 6 + 2。<b>蒙古</b>——两翼张开，6 + 6 + 4。",
 rule6:"<b>白方永远先行</b>，所有模式都一样——随机模式也不例外。",
@@ -1048,7 +1077,7 @@ empowerRook:"<b>♜</b>车<br><small style=\"font-weight:500\">沿直线滑动</
 empowerBishop:"<b>♝</b>象<br><small style=\"font-weight:500\">沿斜线滑动</small>",
 overRematch:"🐎 再来一局",
 overMenu:"菜单",
-footer:"Cavalaria v1.9.1——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
+footer:"Cavalaria v1.9.2——免费，无账号，无广告。托管于 Cloudflare Pages。代码见 GitHub。<br>房间代码与配对均在浏览器内点对点运行（WebRTC）——没有游戏服务器，没有费用，无需注册。",
 statusToMove:"{color}行棋",
 statusYourMove:"轮到你了。",
 statusWaitingOpp:"等待对手…",
@@ -1157,7 +1186,7 @@ btnJoin:"部屋に入る →",
 rulesTitle:"Cavalariaの遊び方",
 rule1:"<b>すべての駒はCavalaria</b>——ナイトとポーンの融合。各駒は<b>両方</b>の動きができる：ポーンとして（前に1マス、初手は前に2マス、斜め前に1マスで取る）<b>そして</b>ナイトとして（一方向に2マス、横に1マス、駒を飛び越える）。",
 rule2:"<b>敵を全滅させれば勝ち。</b>キングもチェックメイトもない——相手の駒を<b>すべて</b>取れば勝ち。成りもアンパッサンもない。",
-rule3:"<b>川は行く手を阻む。</b>何も川を飛び越えることはできない。岸からは、前への跳躍は水への一歩の斜め移動に縮む——横や後ろへの跳躍はそのまま。川の中では、川の中にいる限り L の跳躍を最後までできる；出る時は一歩の斜め移動だけ。ルークやビショップのスライドは、最初に出会った川のマスで止まる。渡るには、入ってから反対側に出る。",
+rule3:"<b>川は行く手を阻む。</b>何も川を飛び越えることはできない——ただし前方向のみ：後ろへの跳躍はいつも完全なまま。岸からは、前への跳躍は着地点で判断される：水に着地すれば L の跳躍はそのまま、もし水の向こうの乾いた陸地に着地するなら水への一歩の斜め移動に縮む。川の中では、川の中にいる限り L の跳躍を最後までできる；出る時は一歩の斜め移動だけ——ただし川の曲がり角を横切る一歩は一切できない。ルークやビショップのスライドは、最初に出会った川のマスで止まる。渡るには、入ってから反対側に出る。",
 rule4:"<b>最後の1駒は強くなる。</b>片方が最後の1駒だけになったら、そのプレイヤーは追加の力を選ぶ：<b>♜ ルーク</b>（タテ・ヨコにスライド）または <b>♝ ビショップ</b>（ナナメにスライド）。ナイトとポーンの動きもそのまま残る。",
 rule5:"<b>布陣は本物の騎兵隊形。</b>各16駒、3列。<b>ローマ</b>——密集した塊、8 + 6 + 2。<b>モンゴル</b>——角を大きく広げて、6 + 6 + 4。",
 rule6:"<b>白が常に先手</b>、どのモードでも——ランダムでも。",
@@ -1187,7 +1216,7 @@ empowerRook:"<b>♜</b>ルーク<br><small style=\"font-weight:500\">タテ・�
 empowerBishop:"<b>♝</b>ビショップ<br><small style=\"font-weight:500\">ナナメにスライド</small>",
 overRematch:"🐎 再戦",
 overMenu:"メニュー",
-footer:"Cavalaria v1.9.1 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
+footer:"Cavalaria v1.9.2 — 無料、アカウント不要、広告なし。Cloudflare Pagesでホスティング。コードはGitHubに。<br>部屋コードとマッチングはブラウザ内でP2P（WebRTC）——ゲームサーバーなし、費用なし、登録なし。",
 statusToMove:"{color}の番",
 statusYourMove:"あなたの番です。",
 statusWaitingOpp:"相手を待っています…",
@@ -1296,7 +1325,7 @@ btnJoin:"Rejoindre la salle →",
 rulesTitle:"Comment fonctionne Cavalaria",
 rule1:"<b>Chaque pièce est une Cavalaria</b> — une fusion de cavalier et de pion. Chacune se déplace des <b>deux</b> façons : comme un pion (1 case en avant, 2 en avant à son premier coup, capture 1 case en diagonale vers l'avant) <b>et</b> comme un cavalier (2 cases dans une direction et 1 sur le côté, en sautant par-dessus les pièces).",
 rule2:"<b>Gagnez en anéantissant l'ennemi.</b> Il n'y a ni rois ni échec et mat — capturez <b>toutes</b> les pièces du camp adverse pour gagner. Pas de promotion ni de prise en passant.",
-rule3:"<b>La rivière bloque le passage.</b> Rien ne saute par-dessus. Depuis la berge, vos sauts vers l'avant se réduisent à un unique pas diagonal dans l'eau — les sauts latéraux et vers l'arrière restent entiers. Une fois dans la rivière, vous pouvez compléter le L tant que vous y restez ; en sortir est un unique pas diagonal. Un glissement de tour ou de fou s'arrête à la première case de rivière rencontrée. Pour traverser, entrez, puis ressortez de l'autre côté.",
+rule3:"<b>La rivière bloque le passage.</b> Rien ne saute par-dessus — mais seulement vers l'avant : les sauts vers l'arrière sont toujours entiers. Depuis la berge, un saut vers l'avant se juge à son point d'arrivée : s'il atterrit dans l'eau, il reste un L complet ; s'il atterrirait sur la terre sèche au-delà de l'eau, il se réduit à un unique pas diagonal dans l'eau. Une fois dans la rivière, vous pouvez compléter le L tant que vous y restez ; en sortir est un unique pas diagonal — sauf un pas à travers le coude de la rivière, qui n'est pas autorisé du tout. Un glissement de tour ou de fou s'arrête à la première case de rivière rencontrée. Pour traverser, entrez, puis ressortez de l'autre côté.",
 rule4:"<b>La dernière unité devient plus forte.</b> Quand un camp n'a plus que sa toute dernière pièce, son joueur choisit un pouvoir supplémentaire pour elle : <b>♜ Tour</b> (glisse le long des rangées et des colonnes) ou <b>♝ Fou</b> (glisse le long des diagonales). Elle garde aussi ses déplacements de cavalier et de pion.",
 rule5:"<b>Les formations sont de la vraie cavalerie.</b> 16 pièces par camp, sur trois rangées. <b>Romain</b> — un bloc solide, 8 + 6 + 2. <b>Mongol</b> — les cornes bien ouvertes, 6 + 6 + 4.",
 rule6:"<b>Les Blancs jouent toujours en premier</b>, dans tous les modes — même en Aléatoire.",
@@ -1326,7 +1355,7 @@ empowerRook:"<b>♜</b>Tour<br><small style=\"font-weight:500\">glisse le long d
 empowerBishop:"<b>♝</b>Fou<br><small style=\"font-weight:500\">glisse le long des diagonales</small>",
 overRematch:"🐎 Revanche",
 overMenu:"Menu",
-footer:"Cavalaria v1.9.1 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
+footer:"Cavalaria v1.9.2 — gratuit, sans comptes, sans publicités. Hébergé sur Cloudflare Pages. Code sur GitHub.<br>Les codes de salle et le jumelage fonctionnent en pair à pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
 statusToMove:"Aux {color} de jouer",
 statusYourMove:"À vous de jouer.",
 statusWaitingOpp:"En attente de l'adversaire…",
@@ -1435,7 +1464,7 @@ btnJoin:"방 참가 →",
 rulesTitle:"Cavalaria 하는 방법",
 rule1:"<b>모든 기물은 Cavalaria입니다</b>——나이트와 폰의 융합체. 각 기물은 <b>두 가지</b> 방법으로 움직입니다. 폰처럼（앞으로 1칸, 첫 수에는 앞으로 2칸, 대각선 앞으로 1칸 잡기）<b>그리고</b> 나이트처럼（한 방향으로 2칸, 옆으로 1칸, 기물을 뛰어넘기）.",
 rule2:"<b>적을 전멸시키면 승리합니다.</b> 킹도 없고 체크메이트도 없습니다——상대 기물을 <b>모두</b> 잡으면 승리합니다. 승격도 앙파상도 없습니다.",
-rule3:"<b>강이 길을 막습니다.</b> 어떤 기물도 강을 뛰어넘을 수 없습니다. 강가에서는 앞으로의 점프가 물속으로의 한 칸 대각선 이동으로 줄어듭니다——옆이나 뒤로의 점프는 그대로입니다. 강 안에 들어간 뒤에는, 강 안에 머무는 한 L 점프를 끝까지 할 수 있습니다；나오는 것은 한 칸 대각선 이동뿐입니다. 룩이나 비숍의 슬라이드는 만나는 첫 번째 강 칸에서 멈춥니다. 건너려면, 들어갔다가 반대쪽으로 나오세요.",
+rule3:"<b>강이 길을 막습니다.</b> 어떤 기물도 강을 뛰어넘을 수 없습니다——하지만 앞으로만 해당됩니다：뒤로의 점프는 항상 완전합니다. 강가에서는 앞으로의 점프가 착지 지점으로 판단됩니다：물에 착지하면 완전한 L 점프가 유지되고, 물 건너편 마른 땅에 착지하게 되면 물속으로의 한 칸 대각선 이동으로 줄어듭니다. 강 안에 들어간 뒤에는, 강 안에 머무는 한 L 점프를 끝까지 할 수 있습니다；나오는 것은 한 칸 대각선 이동뿐입니다——단, 강의 굽이를 가로지르는 이동은 전혀 허용되지 않습니다. 룩이나 비숍의 슬라이드는 만나는 첫 번째 강 칸에서 멈춥니다. 건너려면, 들어갔다가 반대쪽으로 나오세요.",
 rule4:"<b>마지막 기물은 강해집니다.</b> 한쪽이 마지막 기물 하나만 남으면, 플레이어는 추가 능력을 선택합니다. <b>♜ 룩</b>（가로·세로로 미끄러지듯 이동）또는 <b>♝ 비숍</b>（대각선으로 이동）. 나이트와 폰의 움직임도 그대로 유지합니다.",
 rule5:"<b>진형은 진짜 기병 진형입니다.</b> 양쪽 16개 기물, 세 줄. <b>로마</b>——단단한 블록, 8 + 6 + 2. <b>몽골</b>——뿔을 넓게 벌린 형태, 6 + 6 + 4.",
 rule6:"<b>백이 항상 먼저 둡니다</b>. 모든 모드에서——무작위 모드에서도 마찬가지입니다.",
@@ -1465,7 +1494,7 @@ empowerRook:"<b>♜</b>룩<br><small style=\"font-weight:500\">가로·세로로
 empowerBishop:"<b>♝</b>비숍<br><small style=\"font-weight:500\">대각선으로 이동</small>",
 overRematch:"🐎 재대결",
 overMenu:"메뉴",
-footer:"Cavalaria v1.9.1——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
+footer:"Cavalaria v1.9.2——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에.<br>방 코드와 매칭은 브라우저 안에서 P2P（WebRTC）로 동작합니다——게임 서버도, 비용도, 가입도 없습니다.",
 statusToMove:"{color} 차례",
 statusYourMove:"당신의 차례입니다.",
 statusWaitingOpp:"상대를 기다리는 중…",
