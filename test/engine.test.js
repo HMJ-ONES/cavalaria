@@ -207,8 +207,9 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   // diagonal steps, no 2+1 leap over the water to the opposite bank.
   const stD = E.newGame('main', 1, { board: boardWith([[26, C('w')], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvD = movesFrom(E.legalMoves(stD), 26);
-  check('dry zone square: 1+1 diagonals + pawn + 4 backward Ls (10 moves)', mvD.length === 10 && [17, 19, 33, 35, 18, 10, 32, 36, 41, 43].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
+  check('dry zone square: pawn + 4 backward Ls only, NO free 1+1 steps (6 moves)', mvD.length === 6 && [18, 10, 32, 36, 41, 43].every(x => mvD.includes(x)), 'got ' + mvD.join(','));
   check('dry zone square: the backward Ls are offered (a4/e4/a3/e3)', [32, 36, 41, 43].every(x => mvD.includes(x)));
+  check('dry zone square: a dry piece gets no 1+1 diagonal steps (b6/d6/b4/d4)', [17, 19, 33, 35].every(x => !mvD.includes(x)));
   check('dry zone square: NO forward L that leaves the river', [8, 12, 40, 44, 16, 20].every(x => !mvD.includes(x)));
   // Slides stop at the water: empowered rook on d2 (51) slides up the file
   // to d3, then d4 (river) is the last square — never d5+.
@@ -257,12 +258,31 @@ console.log('River blocks the way (v1.9 — nothing jumps over it):');
   // Ls are regular full Ls (retreat is never restricted).
   const stG4 = E.newGame('main', 1, { board: boardWith([[38, C('w', { hasMoved: true })], [0, C('b')]]), river: E.FIXED_RIVER, turn: 'w' });
   const mvG4 = movesFrom(E.legalMoves(stG4), 38);
-  check('curved river, g4: forward diagonal across the bend is banned (f5)', !mvG4.includes(29), 'got ' + mvG4.join(','));
-  check('curved river, g4: forward diagonal into the water is fine (h5)', mvG4.includes(31));
+  check('curved river, g4: no free 1+1 steps for a dry piece (f5/f3/h3)', [29, 45, 47].every(x => !mvG4.includes(x)), 'got ' + mvG4.join(','));
+  check('curved river, g4: blocked forward L shrinks to a mini L into the water (h5)', mvG4.includes(31));
+  check('curved river, g4: blocked forward L with a dry mini L is just gone (f5)', !mvG4.includes(29));
+  check('curved river, g4: no in-zone L for a dry piece (e5)', !mvG4.includes(28));
   check('curved river, g4: pawn step forward is fine (g5)', mvG4.includes(30));
   check('curved river, g4: backward Ls are regular (f2/h2/e3)', [53, 55, 44].every(x => mvG4.includes(x)));
   check('curved river, g4: no forward L leaves the river (f6/h6)', [21, 23].every(x => !mvG4.includes(x)));
-  check('curved river, g4: 8 moves total', mvG4.length === 8, 'got ' + mvG4.join(','));
+  check('curved river, g4: 5 moves total', mvG4.length === 5, 'got ' + mvG4.join(','));
+  // Regression, Nov 27 2026 (screenshot 3, 12x12 Random, seed 2021622213):
+  // White on k6 (82), a DRY square inside the zone — the river at file k
+  // sits on rank 7 (k7), so k6 is not in the water. The river is
+  // a7 b7 c7 d6 e6 f6 g6 h7 i6 j6 k7 l7. A dry piece gets no free 1+1 steps
+  // (so no j5/l5) and no in-zone L (so no i7, whose (1+2) path runs over
+  // the water at j6/i6). Backward Ls are regular; the blocked forward L
+  // to l8 shrinks to a mini L into the water at l7.
+  const K6_RIVER = [60, 61, 62, 67, 70, 71, 75, 76, 77, 78, 80, 81];
+  const stK6 = E.newGame('main', 1, { board: boardWith([[82, C('w', { hasMoved: true })], [0, C('b')]]), river: K6_RIVER, turn: 'w', size: 12 });
+  const mvK6 = movesFrom(E.legalMoves(stK6), 82);
+  check('dry zone k6: no free 1+1 steps (j5/l5)', [93, 95].every(x => !mvK6.includes(x)), 'got ' + mvK6.join(','));
+  check('dry zone k6: no in-zone L over the water (i7)', !mvK6.includes(68));
+  check('dry zone k6: blocked forward L shrinks to a mini L into the water (l7)', mvK6.includes(71));
+  check('dry zone k6: blocked forward L with a dry mini L is just gone (j7)', !mvK6.includes(69));
+  check('dry zone k6: backward Ls are regular (j4/l4/i5)', [105, 107, 92].every(x => mvK6.includes(x)));
+  check('dry zone k6: pawn step into the water is fine (k7)', mvK6.includes(70));
+  check('dry zone k6: 5 moves total', mvK6.length === 5, 'got ' + mvK6.join(','));
 }
 
 console.log('Last-unit empowerment:');
